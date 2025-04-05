@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEditor;
 using TerrainGeneration.Generators;
@@ -742,7 +743,7 @@ namespace TerrainGeneration.Editor
                         
                         EditorGUILayout.LabelField(preset.Name, EditorStyles.boldLabel);
                         
-                        string generatorInfo = $"Generators: {preset.Generators.Count}";
+                        string generatorInfo = preset.Generators != null ? $"Generators: {preset.Generators.Count}" : "Generators: 0";
                         string smootherInfo = preset.Smoother != null ? $"Smoother: {preset.Smoother.Name}" : "No smoother";
                         
                         EditorGUILayout.LabelField(generatorInfo);
@@ -774,6 +775,61 @@ namespace TerrainGeneration.Editor
                         EditorGUILayout.EndVertical();
                         
                         EditorGUILayout.Space(5);
+                    }
+                }
+                
+                // Add buttons for project operations
+                EditorGUILayout.Space(10);
+                EditorGUILayout.LabelField("Project Presets", EditorStyles.boldLabel);
+
+                EditorGUILayout.BeginHorizontal();
+
+                if (GUILayout.Button("Save All Presets to Project"))
+                {
+                    terrainManager.SavePresetsToProject();
+                }
+
+                if (GUILayout.Button("Load Presets from Project"))
+                {
+                    terrainManager.LoadPresetsFromProject();
+                }
+
+                EditorGUILayout.EndHorizontal();
+
+                // Add controls for individual preset project operations
+                if (terrainManager.savedPresets.Count > 0)
+                {
+                    EditorGUILayout.Space(5);
+                    EditorGUILayout.LabelField("Per-Preset Operations", EditorStyles.miniBoldLabel);
+    
+                    // Create array of preset names
+                    string[] presetNames = new string[terrainManager.savedPresets.Count];
+                    for (int i = 0; i < terrainManager.savedPresets.Count; i++)
+                    {
+                        presetNames[i] = terrainManager.savedPresets[i].Name;
+                    }
+                    int selectedPresetIndex = EditorGUILayout.Popup("Select Preset", -1, presetNames);
+    
+                    if (selectedPresetIndex >= 0)
+                    {
+                        EditorGUILayout.BeginHorizontal();
+        
+                        if (GUILayout.Button("Save to Project"))
+                        {
+                            terrainManager.SavePresetToProject(terrainManager.savedPresets[selectedPresetIndex]);
+                        }
+        
+                        EditorGUILayout.EndHorizontal();
+                    }
+                }
+                // Add this to your DrawPresets() method
+                if (GUILayout.Button("Create Default Presets"))
+                {
+                    if (EditorUtility.DisplayDialog("Create Default Presets",
+                            "This will replace all existing presets with default presets. Continue?",
+                            "Yes", "Cancel"))
+                    {
+                        terrainManager.CreateDefaultPresets();
                     }
                 }
             }

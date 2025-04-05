@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using TerrainGeneration.Core;
+using TerrainGeneration.Utilities;
 using UnityEngine;
 using UnityEditor;
 
@@ -92,7 +93,7 @@ namespace TerrainGeneration.SmoothingAndErosion
                         if (smoothingFactor < 0.01f) continue; // Skip if smoothing effect would be negligible
 
                         // Get neighboring heights and calculate weighted average
-                        List<Vector2> neighbours = TerrainManager.GenerateNeighbours(new Vector2(x, y), width, height);
+                        List<Vector2> neighbours = TerrainUtils.GenerateNeighbours(new Vector2(x, y), width, height);
                         float totalWeight = smoothingFactor;
                         float smoothedHeight = originalHeightMap[x, y] * smoothingFactor;
                         

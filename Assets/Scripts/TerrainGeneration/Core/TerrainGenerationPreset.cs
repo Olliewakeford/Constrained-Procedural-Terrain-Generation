@@ -33,8 +33,13 @@ namespace TerrainGeneration.Core
         /// </summary>
         public TerrainGenerationPreset(string name)
         {
-            Name = name;
+        Name = name;
+            // Always ensure Generators is initialized
+        if (Generators == null)
+        {
+            Generators = new List<ITerrainGenerator>();
         }
+    }
         
         /// <summary>
         /// Creates a deep copy of this preset

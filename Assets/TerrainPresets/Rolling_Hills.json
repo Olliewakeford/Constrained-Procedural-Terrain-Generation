@@ -1,0 +1,13 @@
+{
+    "presetName": "Rolling Hills",
+    "generators": [
+        {
+            "typeName": "TerrainGeneration.Generators.PerlinNoiseGenerator",
+            "jsonData": "{\"xFrequency\":0.019999999552965165,\"yFrequency\":0.019999999552965165,\"xOffset\":0,\"yOffset\":0,\"octaves\":5,\"persistence\":1.2000000476837159,\"amplitude\":0.15000000596046449}"
+        }
+    ],
+    "smoother": {
+        "typeName": "TerrainGeneration.SmoothingAndErosion.DistanceBasedSmoother",
+        "jsonData": "{\"baseSmoothing\":1.5,\"distanceFalloff\":2.0,\"iterations\":2}"
+    }
+}

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using TerrainGeneration.Core;
+using TerrainGeneration.Utilities;
 using UnityEngine;
 using UnityEditor;
 
@@ -43,7 +44,7 @@ namespace TerrainGeneration.SmoothingAndErosion
                         if (!shouldModify(x, y)) continue;
                         
                         float avgHeight = originalHeightMap[x, y];
-                        List<Vector2> neighbours = TerrainManager.GenerateNeighbours(new Vector2(x, y), width, height);
+                        List<Vector2> neighbours = TerrainUtils.GenerateNeighbours(new Vector2(x, y), width, height);
                         
                         foreach (Vector2 n in neighbours)
                         {
