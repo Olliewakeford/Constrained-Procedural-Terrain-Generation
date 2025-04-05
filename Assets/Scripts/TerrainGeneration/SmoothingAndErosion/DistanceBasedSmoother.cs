@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using TerrainGeneration.Core;
 using TerrainGeneration.Utilities;
 using UnityEngine;
@@ -68,7 +69,7 @@ namespace TerrainGeneration.SmoothingAndErosion
 
             float smoothProgress = 0;
             int totalIterations = iterations * width * height;
-
+            
             // Show progress bar
             EditorUtility.DisplayProgressBar("Distance-Based Smoothing", "Progress", smoothProgress);
 
@@ -77,7 +78,7 @@ namespace TerrainGeneration.SmoothingAndErosion
                 // Create a copy of the height map to reference original heights
                 float[,] originalHeightMap = new float[width, height];
                 Array.Copy(heightMap, originalHeightMap, heightMap.Length);
-
+                
                 for (int y = 0; y < height; y++)
                 {
                     for (int x = 0; x < width; x++)
@@ -86,27 +87,41 @@ namespace TerrainGeneration.SmoothingAndErosion
 
                         // Normalize the distance to [0,1] range
                         float normalizedDistance = distanceGrid[x, y] / maxDistanceValue;
+                        
+                        float smoothingFactor;
+                        float distanceThreshold = 0.4f; // Adjust this to control how far the strong effect extends (40% of max distance)
 
-                        // Calculate smoothing strength based on normalized distance
-                        float smoothingFactor = baseSmoothing * Mathf.Pow(1 - normalizedDistance, distanceFalloff);
-                
-                        if (smoothingFactor < 0.01f) continue; // Skip if smoothing effect would be negligible
+                        if (normalizedDistance < distanceThreshold) {
+                            // Strong, nearly constant smoothing for areas closer than the threshold
+                            // This creates a more uniform smoothing zone around roads
+                            smoothingFactor = baseSmoothing * (0.8f + 0.2f * (1 - normalizedDistance/distanceThreshold));
+                        } else {
+                            // Gradual falloff for distant areas
+                            // This creates a gentle transition from the strongly smoothed area to natural terrain
+                            float falloffFactor = (normalizedDistance - distanceThreshold) / (1 - distanceThreshold);
+                            smoothingFactor = baseSmoothing * 0.8f * (1 - falloffFactor * falloffFactor);
+                        }
+
+                        // Ensure smoothing doesn't drop below this minimum threshold
+                        smoothingFactor = Mathf.Max(smoothingFactor, 0.05f);
 
                         // Get neighboring heights and calculate weighted average
                         List<Vector2> neighbours = TerrainUtils.GenerateNeighbours(new Vector2(x, y), width, height);
                         float totalWeight = smoothingFactor;
                         float smoothedHeight = originalHeightMap[x, y] * smoothingFactor;
                         
-                        foreach (Vector2 n in neighbours)
-                        {
+                        foreach (Vector2 n in neighbours) {
                             int nx = (int)n.x;
                             int ny = (int)n.y;
-
-                            // Calculate normalized distance for neighbor
-                            float neighborNormalizedDistance = distanceGrid[nx, ny] / maxDistanceValue;
-                            float neighborWeight = smoothingFactor *
-                                                   Mathf.Pow(1 - neighborNormalizedDistance, distanceFalloff);
-
+    
+                            // Give higher weight to neighbors that are closer to roads
+                            // This "pulls" the terrain toward road height
+                            float neighborWeight = smoothingFactor;
+                            if (distanceGrid[nx, ny] < distanceGrid[x, y]) {
+                                // This neighbor is closer to road, give it 2-3x weight
+                                neighborWeight *= 2.5f;
+                            }
+    
                             totalWeight += neighborWeight;
                             smoothedHeight += originalHeightMap[nx, ny] * neighborWeight;
                         }
