@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using TerrainGeneration.Core;
+using TerrainGeneration.Utilities;
 using Random = UnityEngine.Random;
 
 namespace TerrainGeneration.Generators
@@ -136,7 +137,7 @@ namespace TerrainGeneration.Generators
                             case VoronoiType.Perlin:
                                 float perlinX = (x + perlinXOffset) * perlinXFrequency;
                                 float perlinY = (z + perlinYOffset) * perlinYFrequency;
-                                float fbmValue = Utils.fBM(perlinX, perlinY, perlinOctaves, perlinPersistence);
+                                float fbmValue = TerrainUtils.fBM(perlinX, perlinY, perlinOctaves, perlinPersistence);
                                 float perlinContribution = distanceToPeak * fallRate * fbmValue;
                                 h = peak.y - perlinContribution * perlinAmplitude;
                                 break;

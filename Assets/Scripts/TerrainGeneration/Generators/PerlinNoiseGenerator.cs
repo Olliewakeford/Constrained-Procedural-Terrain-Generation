@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using TerrainGeneration.Core;
+using TerrainGeneration.Utilities;
 
 namespace TerrainGeneration.Generators
 {
@@ -71,7 +72,7 @@ namespace TerrainGeneration.Generators
                     if (shouldModify(x, y))
                     {
                         // Use fractional Brownian motion for Perlin noise
-                        heightMap[x, y] += Utils.fBM(
+                        heightMap[x, y] += TerrainUtils.fBM(
                             (x + xOffset) * xFrequency,
                             (y + yOffset) * yFrequency,
                             octaves,
