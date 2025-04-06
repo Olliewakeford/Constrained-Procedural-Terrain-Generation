@@ -441,8 +441,12 @@ MonoBehaviour:
   terrain: {fileID: 1839076304}
   terrainData: {fileID: 15600000, guid: 7c78e49d17e024e75b9e0cd686308ce9, type: 2}
   mask: {fileID: 2800000, guid: 05ab923ea9bf049d7ac2b97238407c4f, type: 3}
-  restoreTerrain: 1
-  savedPresets: []
+  restoreTerrain: 0
+  savedPresets:
+  - Name: Flat Plains
+  - Name: Mountains
+  - Name: Rolling Hills
+  - Name: RoughHills
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

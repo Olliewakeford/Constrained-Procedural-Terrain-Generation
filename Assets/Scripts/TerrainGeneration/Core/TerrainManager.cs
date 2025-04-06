@@ -65,7 +65,7 @@ namespace TerrainGeneration.Core
             distanceGridManager = new DistanceGridManager(this);
     
             // Load or create presets
-            LoadOrCreateDefaultPresets();
+            LoadPresetsFromProject();
         }
 
         #endregion
@@ -154,20 +154,20 @@ namespace TerrainGeneration.Core
         public void ApplyPreset(TerrainGenerationPreset preset)
         {
             if (terrainData == null) return;
-            
+    
             // Record undo state before any modifications
             RecordUndo($"Apply Preset: {preset.Name}");
-            
+    
             // Start with a clean slate if needed
             if (restoreTerrain)
             {
                 InternalRestoreTerrain();
             }
-            
+    
             // Apply all generators in sequence
             bool originalRestoreValue = restoreTerrain;
             restoreTerrain = false; // Don't reset between generators
-            
+    
             foreach (var generator in preset.Generators)
             {
                 float[,] heightMap = GetHeightMap();
@@ -179,24 +179,33 @@ namespace TerrainGeneration.Core
                 );
                 terrainData.SetHeights(0, 0, heightMap);
             }
-            
-            // Apply smoother if provided
-            if (preset.Smoother != null)
+    
+            // Apply all smoothers in sequence
+            foreach (var smoother in preset.Smoothers)
             {
+                if (smoother == null) continue;
+        
+                // Check if we need a distance grid for this smoother
+                if (smoother.RequiresDistanceGrid && !DistanceGridCalculated)
+                {
+                    Debug.LogWarning($"Smoother {smoother.Name} requires a distance grid. Please calculate it first.");
+                    continue;
+                }
+        
                 float[,] heightMap = terrainData.GetHeights(0, 0, HeightmapResolution, HeightmapResolution);
-                preset.Smoother.Smooth(
+                smoother.Smooth(
                     heightMap, 
                     HeightmapResolution, 
                     HeightmapResolution, 
                     ShouldModifyTerrain,
-                    preset.Smoother.RequiresDistanceGrid ? distanceGridManager.DistanceGrid : null
+                    smoother.RequiresDistanceGrid ? distanceGridManager.DistanceGrid : null
                 );
                 terrainData.SetHeights(0, 0, heightMap);
             }
-            
+    
             // Reset flag
             restoreTerrain = originalRestoreValue;
-            
+    
             // Notify listeners
             OnTerrainChanged?.Invoke();
         }
@@ -213,15 +222,15 @@ namespace TerrainGeneration.Core
         }
         
         /// <summary>
-        /// Loads all presets from the project directory
+        /// Loads presets from the project directory
         /// </summary>
         public void LoadPresetsFromProject()
         {
             List<TerrainGenerationPreset> projectPresets = TerrainPresetManager.LoadAllPresetsFromProject();
-    
+
             // Clear existing presets if desired, or merge them
             // savedPresets.Clear(); // Uncomment to replace instead of merge
-    
+
             // Add project presets to the list
             foreach (var preset in projectPresets)
             {
@@ -235,7 +244,7 @@ namespace TerrainGeneration.Core
                         break;
                     }
                 }
-        
+
                 if (!isDuplicate)
                 {
                     savedPresets.Add(preset);
@@ -249,125 +258,6 @@ namespace TerrainGeneration.Core
         public void SavePresetToProject(TerrainGenerationPreset preset)
         {
             TerrainPresetManager.SavePresetToProject(preset, true);
-        }
-        
-        /// <summary>
-        /// Creates and saves default presets
-        /// </summary>
-        public void CreateDefaultPresets()
-        {
-            // Clear existing presets
-            savedPresets.Clear();
-            
-            // Create a mountains preset
-            TerrainGenerationPreset mountainsPreset = new TerrainGenerationPreset("Mountains");
-            
-            // Add a Perlin noise generator for the base terrain
-            PerlinNoiseGenerator baseNoise = new PerlinNoiseGenerator
-            {
-                XFrequency = 0.01f,
-                YFrequency = 0.01f,
-                Octaves = 3,
-                Persistence = 1.5f,
-                Amplitude = 0.3f
-            };
-            mountainsPreset.Generators.Add(baseNoise);
-            
-            // Add a Voronoi generator for mountain peaks
-            VoronoiGenerator mountains = new VoronoiGenerator
-            {
-                PeakCount = 10,
-                FallRate = 2.5f,
-                DropOff = 2.0f,
-                MinHeight = 0.2f,
-                MaxHeight = 0.9f,
-                Type = VoronoiGenerator.VoronoiType.Combined
-            };
-            mountainsPreset.Generators.Add(mountains);
-            
-            // Add adaptive smoother
-            AdaptiveSmoother smoother = new AdaptiveSmoother
-            {
-                Iterations = 3,
-                BaseSmoothing = 2.0f,
-                DistanceFalloff = 1.5f,
-                DetailPreservation = 0.6f
-            };
-            mountainsPreset.Smoother = smoother;
-            
-            // Add to saved presets
-            savedPresets.Add(mountainsPreset);
-            
-            // Create a rolling hills preset
-            TerrainGenerationPreset hillsPreset = new TerrainGenerationPreset("Rolling Hills");
-            
-            // Add a Perlin noise generator for the base terrain
-            PerlinNoiseGenerator hillsNoise = new PerlinNoiseGenerator
-            {
-                XFrequency = 0.02f,
-                YFrequency = 0.02f,
-                Octaves = 5,
-                Persistence = 1.2f,
-                Amplitude = 0.15f
-            };
-            hillsPreset.Generators.Add(hillsNoise);
-            
-            // Add a smoother
-            DistanceBasedSmoother hillsSmoother = new DistanceBasedSmoother
-            {
-                Iterations = 2,
-                BaseSmoothing = 1.5f,
-                DistanceFalloff = 2.0f
-            };
-            hillsPreset.Smoother = hillsSmoother;
-            
-            // Add to saved presets
-            savedPresets.Add(hillsPreset);
-            
-            // Create a flat plains preset
-            TerrainGenerationPreset plainsPreset = new TerrainGenerationPreset("Flat Plains");
-            
-            // Add a Perlin noise generator for subtle variation
-            PerlinNoiseGenerator plainsNoise = new PerlinNoiseGenerator
-            {
-                XFrequency = 0.03f,
-                YFrequency = 0.03f,
-                Octaves = 2,
-                Persistence = 0.8f,
-                Amplitude = 0.05f
-            };
-            plainsPreset.Generators.Add(plainsNoise);
-            
-            // Add a basic smoother
-            BasicSmoother plainsSmoother = new BasicSmoother
-            {
-                Iterations = 3
-            };
-            plainsPreset.Smoother = plainsSmoother;
-            
-            // Add to saved presets
-            savedPresets.Add(plainsPreset);
-            
-            // Save all presets to project
-            SavePresetsToProject();
-            
-            // Log success message
-            Debug.Log("Created and saved default terrain presets");
-        }
-        
-        /// <summary>
-        /// Loads presets or creates defaults if none exist
-        /// </summary>
-        public void LoadOrCreateDefaultPresets()
-        {
-            // Load any existing presets
-            LoadPresetsFromProject();
-    
-            // If no presets were loaded, create defaults
-            if (savedPresets.Count == 0)
-            {
-                CreateDefaultPresets();
-            }
         }
         
         /// <summary>

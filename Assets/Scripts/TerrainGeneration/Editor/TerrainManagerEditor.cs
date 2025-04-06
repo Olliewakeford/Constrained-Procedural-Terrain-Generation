@@ -31,6 +31,7 @@ namespace TerrainGeneration.Editor
         private BasicSmoother basicSmoother = new BasicSmoother();
         private DistanceBasedSmoother distanceBasedSmoother = new DistanceBasedSmoother();
         private AdaptiveSmoother adaptiveSmoother = new AdaptiveSmoother();
+        private DirectionalGradientSmoother directionalGradientSmoother = new DirectionalGradientSmoother();
         
         #endregion
 
@@ -52,7 +53,7 @@ namespace TerrainGeneration.Editor
         
         // For building a generation preset
         private List<ITerrainGenerator> presetGenerators = new List<ITerrainGenerator>();
-        private ITerrainSmoother presetSmoother = null;
+        private List<ITerrainSmoother> presetSmoothers = new List<ITerrainSmoother>();
         private string presetName = "New Preset";
         
         // For multi-Perlin
@@ -190,44 +191,56 @@ namespace TerrainGeneration.Editor
                     presetGenerators.Add(randomGenerator.Clone());
                 }
                 
+                if (GUILayout.Button("Add Uniform"))
+                {
+                    presetGenerators.Add(uniformGenerator.Clone());
+                }
+                
                 EditorGUILayout.EndHorizontal();
                 
-                // Add smoother
+                // Add smoother section
                 EditorGUILayout.Space(5);
-                EditorGUILayout.LabelField("Smoother", EditorStyles.boldLabel);
-                
-                if (presetSmoother == null)
+                EditorGUILayout.LabelField("Smoothers", EditorStyles.boldLabel);
+
+                // Show current smoothers in preset
+                for (int i = 0; i < presetSmoothers.Count; i++)
                 {
-                    EditorGUILayout.LabelField("No smoother selected");
-                    
                     EditorGUILayout.BeginHorizontal();
-                    
-                    if (GUILayout.Button("Basic Smoother"))
+                    EditorGUILayout.LabelField($"{i + 1}. {presetSmoothers[i].Name}");
+    
+                    if (GUILayout.Button("Remove", GUILayout.Width(80)))
                     {
-                        presetSmoother = basicSmoother.Clone();
+                        presetSmoothers.RemoveAt(i);
+                        i--;
                     }
-                    
-                    if (GUILayout.Button("Distance Smoother"))
-                    {
-                        presetSmoother = distanceBasedSmoother.Clone();
-                    }
-                    
-                    if (GUILayout.Button("Adaptive Smoother"))
-                    {
-                        presetSmoother = adaptiveSmoother.Clone();
-                    }
-                    
+    
                     EditorGUILayout.EndHorizontal();
                 }
-                else
+
+                // Add smoother buttons
+                EditorGUILayout.BeginHorizontal();
+
+                if (GUILayout.Button("Add Basic Smoother"))
                 {
-                    EditorGUILayout.LabelField($"Selected: {presetSmoother.Name}");
-                    
-                    if (GUILayout.Button("Remove Smoother"))
-                    {
-                        presetSmoother = null;
-                    }
+                    presetSmoothers.Add(basicSmoother.Clone());
                 }
+
+                if (GUILayout.Button("Add Distance Smoother"))
+                {
+                    presetSmoothers.Add(distanceBasedSmoother.Clone());
+                }
+
+                if (GUILayout.Button("Add Adaptive Smoother"))
+                {
+                    presetSmoothers.Add(adaptiveSmoother.Clone());
+                }
+
+                if (GUILayout.Button("Add Gradient Smoother"))
+                {
+                    presetSmoothers.Add(directionalGradientSmoother.Clone());
+                }
+
+                EditorGUILayout.EndHorizontal();
                 
                 // Save and generate buttons
                 EditorGUILayout.Space(10);
@@ -243,13 +256,13 @@ namespace TerrainGeneration.Editor
                     {
                         TerrainGenerationPreset preset = new TerrainGenerationPreset(presetName);
                         preset.Generators.AddRange(presetGenerators);
-                        preset.Smoother = presetSmoother;
-                        
+                        preset.Smoothers.AddRange(presetSmoothers); // Add all smoothers to the preset
+        
                         // Add the preset to the list
                         Undo.RecordObject(terrainManager, "Save Terrain Generation Preset");
                         terrainManager.savedPresets.Add(preset);
                         EditorUtility.SetDirty(terrainManager);
-                        
+        
                         EditorUtility.DisplayDialog("Success", $"Preset '{presetName}' saved successfully.", "OK");
                     }
                 }
@@ -264,8 +277,8 @@ namespace TerrainGeneration.Editor
                     {
                         TerrainGenerationPreset preset = new TerrainGenerationPreset(presetName);
                         preset.Generators.AddRange(presetGenerators);
-                        preset.Smoother = presetSmoother;
-                        
+                        preset.Smoothers.AddRange(presetSmoothers); // Add all smoothers to the preset
+        
                         // Register this action for undo
                         Undo.RegisterCompleteObjectUndo(terrainManager.terrain.terrainData, "Generate Terrain");
                         terrainManager.ApplyPreset(preset);
@@ -279,24 +292,33 @@ namespace TerrainGeneration.Editor
         private void DrawUniformGenerator()
         {
             showUniformGenerator = EditorGUILayout.Foldout(showUniformGenerator, "Uniform Height Change");
-            
+    
             if (showUniformGenerator)
             {
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                
+        
                 // Uniform height parameters
                 uniformGenerator.UniformStep = EditorGUILayout.Slider(
                     "Uniform Increment",
                     uniformGenerator.UniformStep,
                     -1.0f, 1.0f
                 );
-                
+        
+                EditorGUILayout.BeginHorizontal();
+        
                 if (GUILayout.Button("Apply Uniform Height"))
                 {
                     // Register the operation for undo
                     Undo.RegisterCompleteObjectUndo(terrainManager.terrain.terrainData, "Apply Uniform Height");
                     terrainManager.ApplyGenerator(uniformGenerator);
                 }
+        
+                if (GUILayout.Button("Add to Preset"))
+                {
+                    presetGenerators.Add(uniformGenerator.Clone());
+                }
+        
+                EditorGUILayout.EndHorizontal();
             }
         }
         
@@ -314,7 +336,7 @@ namespace TerrainGeneration.Editor
                     "Height Range",
                     ref heightLimits.x,
                     ref heightLimits.y,
-                    0f, 1f
+                    -1, 1f
                 );
                 randomGenerator.HeightLimits = heightLimits;
                 
@@ -588,7 +610,7 @@ namespace TerrainGeneration.Editor
                 
                 if (GUILayout.Button("Add to Preset"))
                 {
-                    presetSmoother = basicSmoother.Clone();
+                    presetSmoothers.Add(basicSmoother.Clone());
                 }
                 
                 EditorGUILayout.Space(10);
@@ -601,19 +623,19 @@ namespace TerrainGeneration.Editor
                 distanceBasedSmoother.Iterations = EditorGUILayout.IntSlider(
                     "Iterations",
                     distanceBasedSmoother.Iterations,
-                    1, 10
+                    1, 100
                 );
                 
                 distanceBasedSmoother.BaseSmoothing = EditorGUILayout.Slider(
                     "Base Smoothing",
                     distanceBasedSmoother.BaseSmoothing,
-                    0f, 10f
+                    0f, 100f
                 );
                 
                 distanceBasedSmoother.DistanceFalloff = EditorGUILayout.Slider(
                     "Distance Falloff",
                     distanceBasedSmoother.DistanceFalloff,
-                    0.1f, 5f
+                    0.1f, 100f
                 );
                 
                 if (GUILayout.Button("Apply Distance-Based Smoothing"))
@@ -624,7 +646,36 @@ namespace TerrainGeneration.Editor
                 
                 if (GUILayout.Button("Add to Preset"))
                 {
-                    presetSmoother = distanceBasedSmoother.Clone();
+                    presetSmoothers.Add(distanceBasedSmoother.Clone());
+                }
+                
+                EditorGUILayout.Space(10);
+                
+                // Distance-based smoother
+                EditorGUILayout.LabelField("Gradient-Based Smoother", EditorStyles.boldLabel);
+                
+                EditorGUI.BeginDisabledGroup(!terrainManager.DistanceGridCalculated);
+                
+                directionalGradientSmoother.SearchRadius = EditorGUILayout.FloatField("Search Radius", directionalGradientSmoother.SearchRadius);
+                directionalGradientSmoother.AdjustmentStrength = EditorGUILayout.Slider("Adjustment Strength", directionalGradientSmoother.AdjustmentStrength, 0f, 1f);
+                directionalGradientSmoother.DirectionInfluence = EditorGUILayout.Slider("Direction Influence", directionalGradientSmoother.DirectionInfluence, 0f, 1f);
+                directionalGradientSmoother.DetailPreservation = EditorGUILayout.Slider("Detail Preservation", directionalGradientSmoother.DetailPreservation, 0f, 1f);
+        
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.PrefixLabel("Falloff Type");
+                directionalGradientSmoother.DistanceFalloff = (DirectionalGradientSmoother.FalloffType)EditorGUILayout.EnumPopup(directionalGradientSmoother.DistanceFalloff);
+                EditorGUILayout.EndHorizontal();
+                
+                
+                if (GUILayout.Button("Apply Directional Gradient-Based Smoothing"))
+                {
+                    Undo.RegisterCompleteObjectUndo(terrainManager.terrain.terrainData, "Apply Gradient-Based Smoothing");
+                    terrainManager.ApplySmoother(directionalGradientSmoother);
+                }
+                
+                if (GUILayout.Button("Add to Preset"))
+                {
+                    presetSmoothers.Add(directionalGradientSmoother.Clone());
                 }
                 
                 EditorGUILayout.Space(10);
@@ -664,7 +715,7 @@ namespace TerrainGeneration.Editor
                 
                 if (GUILayout.Button("Add to Preset"))
                 {
-                    presetSmoother = adaptiveSmoother.Clone();
+                    presetSmoothers.Add(adaptiveSmoother.Clone());
                 }
                 
                 EditorGUI.EndDisabledGroup();
@@ -744,7 +795,8 @@ namespace TerrainGeneration.Editor
                         EditorGUILayout.LabelField(preset.Name, EditorStyles.boldLabel);
                         
                         string generatorInfo = preset.Generators != null ? $"Generators: {preset.Generators.Count}" : "Generators: 0";
-                        string smootherInfo = preset.Smoother != null ? $"Smoother: {preset.Smoother.Name}" : "No smoother";
+                        string smootherInfo = preset.Smoothers != null && preset.Smoothers.Count > 0 ? 
+                            $"Smoothers: {preset.Smoothers.Count}" : "No smoothers";
                         
                         EditorGUILayout.LabelField(generatorInfo);
                         EditorGUILayout.LabelField(smootherInfo);
@@ -820,16 +872,6 @@ namespace TerrainGeneration.Editor
                         }
         
                         EditorGUILayout.EndHorizontal();
-                    }
-                }
-                // Add this to your DrawPresets() method
-                if (GUILayout.Button("Create Default Presets"))
-                {
-                    if (EditorUtility.DisplayDialog("Create Default Presets",
-                            "This will replace all existing presets with default presets. Continue?",
-                            "Yes", "Cancel"))
-                    {
-                        terrainManager.CreateDefaultPresets();
                     }
                 }
             }

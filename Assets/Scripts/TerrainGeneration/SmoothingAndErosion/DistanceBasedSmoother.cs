@@ -118,8 +118,8 @@ namespace TerrainGeneration.SmoothingAndErosion
                             // This "pulls" the terrain toward road height
                             float neighborWeight = smoothingFactor;
                             if (distanceGrid[nx, ny] < distanceGrid[x, y]) {
-                                // This neighbor is closer to road, give it 2-3x weight
-                                neighborWeight *= 2.5f;
+                                // This neighbor is closer to road, give it more weight
+                                neighborWeight *= 3f;
                             }
     
                             totalWeight += neighborWeight;

@@ -13,7 +13,7 @@ namespace TerrainGeneration.Core
         /// <summary>
         /// Path to the presets directory within the project
         /// </summary>
-        private static string PresetsDirectory => Path.Combine(Application.dataPath, "TerrainPresets");
+        public static string PresetsDirectory => Path.Combine(Application.dataPath, "TerrainPresets");
         
         /// <summary>
         /// Ensures the presets directory exists
@@ -124,24 +124,29 @@ namespace TerrainGeneration.Core
             {
                 presetName = preset.Name,
                 generators = new List<GeneratorSaveData>(),
-                smoother = preset.Smoother != null ? ConvertSmootherToSaveData(preset.Smoother) : null
+                smoothers = new List<SmootherSaveData>()
             };
-            
+    
             foreach (var generator in preset.Generators)
             {
                 saveData.generators.Add(ConvertGeneratorToSaveData(generator));
             }
-            
+    
+            foreach (var smoother in preset.Smoothers)
+            {
+                saveData.smoothers.Add(ConvertSmootherToSaveData(smoother));
+            }
+    
             return saveData;
         }
-        
+
         /// <summary>
         /// Converts save data back to a preset
         /// </summary>
         private static TerrainGenerationPreset ConvertSaveDataToPreset(PresetSaveData saveData)
         {
             TerrainGenerationPreset preset = new TerrainGenerationPreset(saveData.presetName);
-            
+    
             foreach (var generatorData in saveData.generators)
             {
                 ITerrainGenerator generator = CreateGeneratorFromSaveData(generatorData);
@@ -150,12 +155,16 @@ namespace TerrainGeneration.Core
                     preset.Generators.Add(generator);
                 }
             }
-            
-            if (saveData.smoother != null)
+    
+            foreach (var smootherData in saveData.smoothers)
             {
-                preset.Smoother = CreateSmootherFromSaveData(saveData.smoother);
+                ITerrainSmoother smoother = CreateSmootherFromSaveData(smootherData);
+                if (smoother != null)
+                {
+                    preset.Smoothers.Add(smoother);
+                }
             }
-            
+    
             return preset;
         }
         
@@ -258,7 +267,7 @@ namespace TerrainGeneration.Core
     {
         public string presetName;
         public List<GeneratorSaveData> generators = new List<GeneratorSaveData>();
-        public SmootherSaveData smoother;
+        public List<SmootherSaveData> smoothers = new List<SmootherSaveData>();
     }
     
     /// <summary>
