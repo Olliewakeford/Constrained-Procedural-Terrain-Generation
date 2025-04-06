@@ -23,7 +23,6 @@ namespace TerrainGeneration.Editor
         // Generator instances - We'll keep these as regular objects in the editor
         // since we're creating and modifying them only through the editor UI
         private UniformHeightGenerator uniformGenerator = new UniformHeightGenerator();
-        private RandomHeightGenerator randomGenerator = new RandomHeightGenerator();
         private PerlinNoiseGenerator perlinGenerator = new PerlinNoiseGenerator();
         private VoronoiGenerator voronoiGenerator = new VoronoiGenerator();
         
@@ -43,7 +42,6 @@ namespace TerrainGeneration.Editor
         private bool showCommonSettings = true;
         private bool showOneClickGeneration = false;
         private bool showUniformGenerator = false;
-        private bool showRandomGenerator = false;
         private bool showPerlinGenerator = false;
         private bool showMultiPerlinGenerator = false;
         private bool showVoronoiGenerator = false;
@@ -95,7 +93,6 @@ namespace TerrainGeneration.Editor
             
             // Individual generators
             DrawUniformGenerator();
-            DrawRandomGenerator();
             DrawPerlinGenerator();
             DrawMultiPerlinGenerator();
             DrawVoronoiGenerator();
@@ -184,11 +181,6 @@ namespace TerrainGeneration.Editor
                 if (GUILayout.Button("Add Voronoi"))
                 {
                     presetGenerators.Add(voronoiGenerator.Clone());
-                }
-                
-                if (GUILayout.Button("Add Random"))
-                {
-                    presetGenerators.Add(randomGenerator.Clone());
                 }
                 
                 if (GUILayout.Button("Add Uniform"))
@@ -319,34 +311,6 @@ namespace TerrainGeneration.Editor
                 }
         
                 EditorGUILayout.EndHorizontal();
-            }
-        }
-        
-        private void DrawRandomGenerator()
-        {
-            showRandomGenerator = EditorGUILayout.Foldout(showRandomGenerator, "Random Height Change");
-            
-            if (showRandomGenerator)
-            {
-                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                
-                // Random height parameters - Handle differently because MinMaxSlider needs refs
-                Vector2 heightLimits = randomGenerator.HeightLimits;
-                EditorGUILayout.MinMaxSlider(
-                    "Height Range",
-                    ref heightLimits.x,
-                    ref heightLimits.y,
-                    -1, 1f
-                );
-                randomGenerator.HeightLimits = heightLimits;
-                
-                EditorGUILayout.LabelField($"Min: {randomGenerator.HeightLimits.x:F2}, Max: {randomGenerator.HeightLimits.y:F2}");
-                
-                if (GUILayout.Button("Apply Random Heights"))
-                {
-                    Undo.RegisterCompleteObjectUndo(terrainManager.terrain.terrainData, "Apply Random Heights");
-                    terrainManager.ApplyGenerator(randomGenerator);
-                }
             }
         }
         
