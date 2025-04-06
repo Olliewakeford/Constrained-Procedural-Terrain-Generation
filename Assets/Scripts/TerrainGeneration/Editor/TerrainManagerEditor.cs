@@ -810,33 +810,6 @@ namespace TerrainGeneration.Editor
                 }
 
                 EditorGUILayout.EndHorizontal();
-
-                // Add controls for individual preset project operations
-                if (terrainManager.savedPresets.Count > 0)
-                {
-                    EditorGUILayout.Space(5);
-                    EditorGUILayout.LabelField("Per-Preset Operations", EditorStyles.miniBoldLabel);
-    
-                    // Create array of preset names
-                    string[] presetNames = new string[terrainManager.savedPresets.Count];
-                    for (int i = 0; i < terrainManager.savedPresets.Count; i++)
-                    {
-                        presetNames[i] = terrainManager.savedPresets[i].Name;
-                    }
-                    int selectedPresetIndex = EditorGUILayout.Popup("Select Preset", -1, presetNames);
-    
-                    if (selectedPresetIndex >= 0)
-                    {
-                        EditorGUILayout.BeginHorizontal();
-        
-                        if (GUILayout.Button("Save to Project"))
-                        {
-                            terrainManager.SavePresetToProject(terrainManager.savedPresets[selectedPresetIndex]);
-                        }
-        
-                        EditorGUILayout.EndHorizontal();
-                    }
-                }
             }
         }
         

@@ -232,34 +232,22 @@ namespace TerrainGeneration.Core
         }
         
         /// <summary>
-        /// Loads presets from the project directory
+        /// Loads all presets from the project directory
         /// </summary>
         public void LoadPresetsFromProject()
         {
             List<TerrainGenerationPreset> projectPresets = TerrainPresetManager.LoadAllPresetsFromProject();
 
-            // Clear existing presets if desired, or merge them
-            // savedPresets.Clear(); // Uncomment to replace instead of merge
+            // Clear existing presets
+            savedPresets.Clear();
 
             // Add project presets to the list
             foreach (var preset in projectPresets)
             {
-                // Check for duplicates by name
-                bool isDuplicate = false;
-                foreach (var existingPreset in savedPresets)
-                {
-                    if (existingPreset.Name == preset.Name)
-                    {
-                        isDuplicate = true;
-                        break;
-                    }
-                }
-
-                if (!isDuplicate)
-                {
-                    savedPresets.Add(preset);
-                }
+                savedPresets.Add(preset);
             }
+    
+            Debug.Log($"Loaded {savedPresets.Count} presets into TerrainManager");
         }
 
         /// <summary>

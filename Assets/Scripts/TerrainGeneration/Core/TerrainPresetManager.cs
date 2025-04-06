@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using UnityEngine;
+using TerrainGeneration.Generators;
+using TerrainGeneration.SmoothingAndErosion;
 
 namespace TerrainGeneration.Core
 {
@@ -80,28 +82,42 @@ namespace TerrainGeneration.Core
             try
             {
                 string[] files = Directory.GetFiles(PresetsDirectory, "*.json");
+                Debug.Log($"Found {files.Length} preset files in {PresetsDirectory}");
                 
                 foreach (string file in files)
                 {
                     try
                     {
+                        Debug.Log($"Loading preset from: {file}");
                         string json = File.ReadAllText(file);
                         PresetSaveData saveData = JsonUtility.FromJson<PresetSaveData>(json);
                         
                         if (saveData != null)
                         {
                             TerrainGenerationPreset preset = ConvertSaveDataToPreset(saveData);
-                            // Ensure Generators is never null
+                            
+                            // Ensure collections aren't null
                             if (preset.Generators == null)
                             {
                                 preset.Generators = new List<ITerrainGenerator>();
                             }
+                            
+                            if (preset.Smoothers == null)
+                            {
+                                preset.Smoothers = new List<ITerrainSmoother>();
+                            }
+                            
+                            Debug.Log($"Loaded preset: {preset.Name} with {preset.Generators.Count} generators and {preset.Smoothers.Count} smoothers");
                             presets.Add(preset);
+                        }
+                        else
+                        {
+                            Debug.LogError($"Failed to parse JSON from file: {file}");
                         }
                     }
                     catch (Exception e)
                     {
-                        Debug.LogWarning($"Failed to load preset from {file}: {e.Message}");
+                        Debug.LogError($"Failed to load preset from {file}: {e.Message}");
                     }
                 }
                 
@@ -126,27 +142,28 @@ namespace TerrainGeneration.Core
                 generators = new List<GeneratorSaveData>(),
                 smoothers = new List<SmootherSaveData>()
             };
-    
+            
             foreach (var generator in preset.Generators)
             {
                 saveData.generators.Add(ConvertGeneratorToSaveData(generator));
             }
-    
+            
             foreach (var smoother in preset.Smoothers)
             {
                 saveData.smoothers.Add(ConvertSmootherToSaveData(smoother));
             }
-    
+            
             return saveData;
         }
-
+        
         /// <summary>
         /// Converts save data back to a preset
         /// </summary>
         private static TerrainGenerationPreset ConvertSaveDataToPreset(PresetSaveData saveData)
         {
             TerrainGenerationPreset preset = new TerrainGenerationPreset(saveData.presetName);
-    
+            
+            // Process generators
             foreach (var generatorData in saveData.generators)
             {
                 ITerrainGenerator generator = CreateGeneratorFromSaveData(generatorData);
@@ -155,7 +172,8 @@ namespace TerrainGeneration.Core
                     preset.Generators.Add(generator);
                 }
             }
-    
+            
+            // Process smoothers
             foreach (var smootherData in saveData.smoothers)
             {
                 ITerrainSmoother smoother = CreateSmootherFromSaveData(smootherData);
@@ -164,7 +182,7 @@ namespace TerrainGeneration.Core
                     preset.Smoothers.Add(smoother);
                 }
             }
-    
+            
             return preset;
         }
         
@@ -193,69 +211,82 @@ namespace TerrainGeneration.Core
         }
         
         /// <summary>
-        /// Creates a generator instance from save data
+        /// Creates a generator instance from save data using explicit type mapping
         /// </summary>
         private static ITerrainGenerator CreateGeneratorFromSaveData(GeneratorSaveData data)
         {
             try
             {
-                Type type = Type.GetType(data.typeName);
-                if (type == null)
+                ITerrainGenerator generator = null;
+                
+                // Use explicit type mapping for generators
+                switch (data.typeName)
                 {
-                    // Try with the assembly-qualified name
-                    foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-                    {
-                        type = assembly.GetType(data.typeName);
-                        if (type != null) break;
-                    }
+                    case "TerrainGeneration.Generators.UniformHeightGenerator":
+                        generator = new UniformHeightGenerator();
+                        break;
+                    case "TerrainGeneration.Generators.PerlinNoiseGenerator":
+                        generator = new PerlinNoiseGenerator();
+                        break;
+                    case "TerrainGeneration.Generators.VoronoiGenerator":
+                        generator = new VoronoiGenerator();
+                        break;
+                    default:
+                        Debug.LogError($"Unknown generator type: {data.typeName}");
+                        return null;
                 }
                 
-                if (type != null)
-                {
-                    ITerrainGenerator generator = (ITerrainGenerator)Activator.CreateInstance(type);
-                    JsonUtility.FromJsonOverwrite(data.jsonData, generator);
-                    return generator;
-                }
+                // Deserialize properties
+                JsonUtility.FromJsonOverwrite(data.jsonData, generator);
+                Debug.Log($"Created generator: {generator.Name}");
+                return generator;
             }
             catch (Exception e)
             {
-                Debug.LogError($"Failed to create generator from save data: {e.Message}");
+                Debug.LogError($"Failed to create generator: {e.Message}");
+                return null;
             }
-            
-            return null;
         }
         
         /// <summary>
-        /// Creates a smoother instance from save data
+        /// Creates a smoother instance from save data using explicit type mapping
         /// </summary>
         private static ITerrainSmoother CreateSmootherFromSaveData(SmootherSaveData data)
         {
             try
             {
-                Type type = Type.GetType(data.typeName);
-                if (type == null)
+                ITerrainSmoother smoother = null;
+                
+                // Use explicit type mapping for smoothers
+                switch (data.typeName)
                 {
-                    // Try with the assembly-qualified name
-                    foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-                    {
-                        type = assembly.GetType(data.typeName);
-                        if (type != null) break;
-                    }
+                    case "TerrainGeneration.SmoothingAndErosion.BasicSmoother":
+                        smoother = new BasicSmoother();
+                        break;
+                    case "TerrainGeneration.SmoothingAndErosion.DistanceBasedSmoother":
+                        smoother = new DistanceBasedSmoother();
+                        break;
+                    case "TerrainGeneration.SmoothingAndErosion.AdaptiveSmoother":
+                        smoother = new AdaptiveSmoother();
+                        break;
+                    case "TerrainGeneration.SmoothingAndErosion.DirectionalGradientSmoother":
+                        smoother = new DirectionalGradientSmoother();
+                        break;
+                    default:
+                        Debug.LogError($"Unknown smoother type: {data.typeName}");
+                        return null;
                 }
                 
-                if (type != null)
-                {
-                    ITerrainSmoother smoother = (ITerrainSmoother)Activator.CreateInstance(type);
-                    JsonUtility.FromJsonOverwrite(data.jsonData, smoother);
-                    return smoother;
-                }
+                // Deserialize properties
+                JsonUtility.FromJsonOverwrite(data.jsonData, smoother);
+                Debug.Log($"Created smoother: {smoother.Name}");
+                return smoother;
             }
             catch (Exception e)
             {
-                Debug.LogError($"Failed to create smoother from save data: {e.Message}");
+                Debug.LogError($"Failed to create smoother: {e.Message}");
+                return null;
             }
-            
-            return null;
         }
     }
     
