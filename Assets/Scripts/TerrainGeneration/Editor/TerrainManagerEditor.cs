@@ -503,7 +503,6 @@ namespace TerrainGeneration.Editor
                     Undo.RegisterCompleteObjectUndo(terrainManager.terrain.terrainData, "Apply Multiple Perlin Layers");
                     
                     bool wasRestore = terrainManager.restoreTerrain;
-                    terrainManager.restoreTerrain = true;
                     
                     // Apply first layer
                     terrainManager.ApplyGenerator(perlinLayers[0]);

@@ -92,12 +92,22 @@ namespace TerrainGeneration.Core
         public void ApplyGenerator(ITerrainGenerator generator)
         {
             if (terrainData == null) return;
-            
+    
             // Record undo state before modification
             RecordUndo($"Apply {generator.Name}");
-            
+    
+            // For UniformHeightGenerator, never reset the terrain, regardless of restoreTerrain setting
+            bool originalRestoreValue = restoreTerrain;
+            if (generator is UniformHeightGenerator)
+            {
+                restoreTerrain = false;
+            }
+    
             float[,] heightMap = GetHeightMap();
-            
+    
+            // Restore the original restoreTerrain value
+            restoreTerrain = originalRestoreValue;
+    
             // Apply the generator
             generator.Generate(
                 heightMap, 
@@ -105,10 +115,10 @@ namespace TerrainGeneration.Core
                 HeightmapResolution, 
                 ShouldModifyTerrain
             );
-            
+    
             // Update the terrain
             terrainData.SetHeights(0, 0, heightMap);
-            
+    
             // Notify listeners
             OnTerrainChanged?.Invoke();
         }
