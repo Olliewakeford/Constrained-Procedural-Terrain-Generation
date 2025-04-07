@@ -231,6 +231,9 @@ namespace TerrainGeneration.Core
                     case "TerrainGeneration.Generators.VoronoiGenerator":
                         generator = new VoronoiGenerator();
                         break;
+                    case "TerrainGeneration.Generators.MidpointDisplacementGenerator":
+                        generator = new MidpointDisplacementGenerator();
+                        break;
                     default:
                         Debug.LogError($"Unknown generator type: {data.typeName}");
                         return null;
@@ -271,6 +274,12 @@ namespace TerrainGeneration.Core
                         break;
                     case "TerrainGeneration.SmoothingAndErosion.DirectionalGradientSmoother":
                         smoother = new DirectionalGradientSmoother();
+                        break;
+                    case "TerrainGeneration.SmoothingAndErosion.HydraulicErosion":
+                        smoother = new HydraulicErosion();
+                        break;
+                    case "TerrainGeneration.SmoothingAndErosion.ThermalErosion":
+                        smoother = new ThermalErosion();
                         break;
                     default:
                         Debug.LogError($"Unknown smoother type: {data.typeName}");

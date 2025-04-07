@@ -33,6 +33,10 @@ namespace TerrainGeneration.Editor
         private AdaptiveSmoother adaptiveSmoother = new AdaptiveSmoother();
         private DirectionalGradientSmoother directionalGradientSmoother = new DirectionalGradientSmoother();
         
+        // Erosion instances
+        private HydraulicErosion hydraulicErosion = new HydraulicErosion();
+        private ThermalErosion thermalErosion = new ThermalErosion();
+        
         #endregion
 
         #region Editor State
@@ -48,6 +52,7 @@ namespace TerrainGeneration.Editor
         private bool showVoronoiGenerator = false;
         private bool showMidpointDisplacementGenerator = false;
         private bool showSmoothing = false;
+        private bool showErosion = false;
         private bool showDistanceGrid = false;
         private bool showPresets = false;
         
@@ -102,6 +107,9 @@ namespace TerrainGeneration.Editor
             
             // Smoothing
             DrawSmoothing();
+            
+            // Erosion
+            DrawErosion();
             
             // Distance grid
             DrawDistanceGrid();
@@ -200,7 +208,7 @@ namespace TerrainGeneration.Editor
                 
                 // Add smoother section
                 EditorGUILayout.Space(5);
-                EditorGUILayout.LabelField("Smoothers", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Smoothers & Erosion", EditorStyles.boldLabel);
 
                 // Show current smoothers in preset
                 for (int i = 0; i < presetSmoothers.Count; i++)
@@ -240,6 +248,21 @@ namespace TerrainGeneration.Editor
                     presetSmoothers.Add(directionalGradientSmoother.Clone());
                 }
 
+                EditorGUILayout.EndHorizontal();
+                
+                // Add erosion buttons
+                EditorGUILayout.BeginHorizontal();
+                
+                if (GUILayout.Button("Add Hydraulic Erosion"))
+                {
+                    presetSmoothers.Add(hydraulicErosion.Clone());
+                }
+                
+                if (GUILayout.Button("Add Thermal Erosion"))
+                {
+                    presetSmoothers.Add(thermalErosion.Clone());
+                }
+                
                 EditorGUILayout.EndHorizontal();
                 
                 // Save and generate buttons
@@ -767,6 +790,183 @@ namespace TerrainGeneration.Editor
                 if (!terrainManager.DistanceGridCalculated)
                 {
                     EditorGUILayout.HelpBox("Distance-based smoothing requires a distance grid. Please calculate it first.", MessageType.Warning);
+                }
+            }
+        }
+        
+        private void DrawErosion()
+        {
+            showErosion = EditorGUILayout.Foldout(showErosion, "Erosion");
+            
+            if (showErosion)
+            {
+                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                
+                // Hydraulic erosion
+                EditorGUILayout.LabelField("Hydraulic Erosion", EditorStyles.boldLabel);
+                
+                EditorGUI.BeginDisabledGroup(!terrainManager.DistanceGridCalculated);
+                
+                EditorGUILayout.HelpBox("Simulates water flow over the terrain, creating valleys and ridges while respecting road constraints.", MessageType.Info);
+                
+                EditorGUILayout.LabelField("Basic Parameters", EditorStyles.boldLabel);
+                
+                hydraulicErosion.DropletCount = EditorGUILayout.IntSlider(
+                    "Droplet Count",
+                    hydraulicErosion.DropletCount,
+                    1000, 100000
+                );
+                
+                hydraulicErosion.MaxDropletLifetime = EditorGUILayout.IntSlider(
+                    "Max Droplet Lifetime",
+                    hydraulicErosion.MaxDropletLifetime,
+                    5, 100
+                );
+                
+                hydraulicErosion.InitialWaterVolume = EditorGUILayout.Slider(
+                    "Initial Water Volume",
+                    hydraulicErosion.InitialWaterVolume,
+                    0.1f, 5.0f
+                );
+                
+                EditorGUILayout.LabelField("Erosion Physics", EditorStyles.boldLabel);
+                
+                hydraulicErosion.Inertia = EditorGUILayout.Slider(
+                    "Inertia",
+                    hydraulicErosion.Inertia,
+                    0.0f, 1.0f
+                );
+                
+                hydraulicErosion.SedimentCapacityFactor = EditorGUILayout.Slider(
+                    "Sediment Capacity",
+                    hydraulicErosion.SedimentCapacityFactor,
+                    0.1f, 10.0f
+                );
+                
+                hydraulicErosion.ErodeSpeed = EditorGUILayout.Slider(
+                    "Erosion Speed",
+                    hydraulicErosion.ErodeSpeed,
+                    0.0f, 1.0f
+                );
+                
+                hydraulicErosion.DepositSpeed = EditorGUILayout.Slider(
+                    "Deposit Speed",
+                    hydraulicErosion.DepositSpeed,
+                    0.0f, 1.0f
+                );
+                
+                hydraulicErosion.EvaporationRate = EditorGUILayout.Slider(
+                    "Evaporation Rate",
+                    hydraulicErosion.EvaporationRate,
+                    0.0f, 0.1f
+                );
+                
+                EditorGUILayout.LabelField("Brush Settings", EditorStyles.boldLabel);
+                
+                hydraulicErosion.ErosionRadius = EditorGUILayout.IntSlider(
+                    "Erosion Radius",
+                    hydraulicErosion.ErosionRadius,
+                    1, 10
+                );
+                
+                hydraulicErosion.ErosionFalloff = EditorGUILayout.Slider(
+                    "Erosion Falloff",
+                    hydraulicErosion.ErosionFalloff,
+                    0.1f, 2.0f
+                );
+                
+                EditorGUILayout.LabelField("Road Integration", EditorStyles.boldLabel);
+                
+                hydraulicErosion.MaxErosionDepth = EditorGUILayout.Slider(
+                    "Max Erosion Depth",
+                    hydraulicErosion.MaxErosionDepth,
+                    0.01f, 0.5f
+                );
+                
+                hydraulicErosion.RoadInfluenceMultiplier = EditorGUILayout.Slider(
+                    "Road Influence Multiplier",
+                    hydraulicErosion.RoadInfluenceMultiplier,
+                    0.0f, 1.0f
+                );
+                
+                hydraulicErosion.RoadInfluenceDistance = EditorGUILayout.Slider(
+                    "Road Influence Distance",
+                    hydraulicErosion.RoadInfluenceDistance,
+                    0.05f, 1.0f
+                );
+                
+                if (GUILayout.Button("Apply Hydraulic Erosion"))
+                {
+                    Undo.RegisterCompleteObjectUndo(terrainManager.terrain.terrainData, "Apply Hydraulic Erosion");
+                    terrainManager.ApplySmoother(hydraulicErosion);
+                }
+                
+                if (GUILayout.Button("Add to Preset"))
+                {
+                    presetSmoothers.Add(hydraulicErosion.Clone());
+                }
+                
+                EditorGUILayout.Space(10);
+                
+                // Thermal erosion
+                EditorGUILayout.LabelField("Thermal Erosion", EditorStyles.boldLabel);
+                
+                EditorGUILayout.HelpBox("Simulates material slumping on steep slopes to create more natural terrain gradients.", MessageType.Info);
+                
+                thermalErosion.Iterations = EditorGUILayout.IntSlider(
+                    "Iterations",
+                    thermalErosion.Iterations,
+                    1, 20
+                );
+                
+                thermalErosion.Talus = EditorGUILayout.Slider(
+                    "Maximum Stable Slope",
+                    thermalErosion.Talus,
+                    0.01f, 2.0f
+                );
+                
+                thermalErosion.ErosionRate = EditorGUILayout.Slider(
+                    "Erosion Rate",
+                    thermalErosion.ErosionRate,
+                    0.0f, 1.0f
+                );
+                
+                thermalErosion.RespectRoadSlopes = EditorGUILayout.Toggle(
+                    "Respect Road Slopes",
+                    thermalErosion.RespectRoadSlopes
+                );
+                
+                if (thermalErosion.RespectRoadSlopes)
+                {
+                    thermalErosion.RoadInfluenceDistance = EditorGUILayout.Slider(
+                        "Road Influence Distance",
+                        thermalErosion.RoadInfluenceDistance,
+                        0.05f, 1.0f
+                    );
+                    
+                    thermalErosion.RoadSlopeFactor = EditorGUILayout.Slider(
+                        "Road Slope Factor",
+                        thermalErosion.RoadSlopeFactor,
+                        0.0f, 1.0f
+                    );
+                }
+                
+                if (GUILayout.Button("Apply Thermal Erosion"))
+                {
+                    Undo.RegisterCompleteObjectUndo(terrainManager.terrain.terrainData, "Apply Thermal Erosion");
+                    terrainManager.ApplySmoother(thermalErosion);
+                }
+                
+                if (GUILayout.Button("Add to Preset"))
+                {
+                    presetSmoothers.Add(thermalErosion.Clone());
+                }
+                
+                EditorGUI.EndDisabledGroup();
+                
+                if (!terrainManager.DistanceGridCalculated)
+                {
+                    EditorGUILayout.HelpBox("Erosion requires a distance grid. Please calculate it first.", MessageType.Warning);
                 }
             }
         }
