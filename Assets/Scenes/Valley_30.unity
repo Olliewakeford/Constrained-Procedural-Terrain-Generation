@@ -323,7 +323,7 @@ MonoBehaviour:
   restoreTerrain: 1
   savedPresets:
   - Name: HillyAndRough_NoBlend
-  - Name: Temp
+  - Name: EverythingInOne
 --- !u!1 &2125133947
 GameObject:
   m_ObjectHideFlags: 0

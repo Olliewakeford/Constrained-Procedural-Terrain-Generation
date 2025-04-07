@@ -19,7 +19,7 @@
         },
         {
             "typeName": "TerrainGeneration.Generators.UniformHeightGenerator",
-            "jsonData": "{\"uniformStep\":-0.05000000074505806}"
+            "jsonData": "{\"uniformStep\":-0.05000000074505806,\"normalizeToMinimum\":false}"
         }
     ],
     "smoothers": [
