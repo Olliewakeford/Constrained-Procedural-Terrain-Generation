@@ -25,6 +25,7 @@ namespace TerrainGeneration.Editor
         private UniformHeightGenerator uniformGenerator = new UniformHeightGenerator();
         private PerlinNoiseGenerator perlinGenerator = new PerlinNoiseGenerator();
         private VoronoiGenerator voronoiGenerator = new VoronoiGenerator();
+        private MidpointDisplacementGenerator midpointDisplacementGenerator = new MidpointDisplacementGenerator();
         
         // Smoother instances
         private BasicSmoother basicSmoother = new BasicSmoother();
@@ -45,6 +46,7 @@ namespace TerrainGeneration.Editor
         private bool showPerlinGenerator = false;
         private bool showMultiPerlinGenerator = false;
         private bool showVoronoiGenerator = false;
+        private bool showMidpointDisplacementGenerator = false;
         private bool showSmoothing = false;
         private bool showDistanceGrid = false;
         private bool showPresets = false;
@@ -96,6 +98,7 @@ namespace TerrainGeneration.Editor
             DrawPerlinGenerator();
             DrawMultiPerlinGenerator();
             DrawVoronoiGenerator();
+            DrawMidpointDisplacementGenerator();
             
             // Smoothing
             DrawSmoothing();
@@ -181,6 +184,11 @@ namespace TerrainGeneration.Editor
                 if (GUILayout.Button("Add Voronoi"))
                 {
                     presetGenerators.Add(voronoiGenerator.Clone());
+                }
+                
+                if (GUILayout.Button("Add Midpoint"))
+                {
+                    presetGenerators.Add(midpointDisplacementGenerator.Clone());
                 }
                 
                 if (GUILayout.Button("Add Uniform"))
@@ -295,6 +303,20 @@ namespace TerrainGeneration.Editor
                     uniformGenerator.UniformStep,
                     -1.0f, 1.0f
                 );
+                
+                uniformGenerator.NormalizeToMinimum = EditorGUILayout.Toggle(
+                    "Normalize to Minimum Height",
+                    uniformGenerator.NormalizeToMinimum
+                );
+
+                if (uniformGenerator.NormalizeToMinimum)
+                {
+                    EditorGUILayout.HelpBox(
+                        "This will offset all modifiable terrain to bring the minimum height to zero. " +
+                        "The uniform increment setting will be ignored.", 
+                        MessageType.Info
+                    );
+                }
         
                 EditorGUILayout.BeginHorizontal();
         
@@ -547,6 +569,65 @@ namespace TerrainGeneration.Editor
                 }
             }
         }
+        
+        private void DrawMidpointDisplacementGenerator()
+{
+    showMidpointDisplacementGenerator = EditorGUILayout.Foldout(showMidpointDisplacementGenerator, "Midpoint Displacement");
+
+    if (showMidpointDisplacementGenerator)
+    {
+        EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+
+        // Midpoint displacement parameters
+        midpointDisplacementGenerator.MinHeight = EditorGUILayout.FloatField(
+            "Min Height", 
+            midpointDisplacementGenerator.MinHeight
+        );
+
+        midpointDisplacementGenerator.MaxHeight = EditorGUILayout.FloatField(
+            "Max Height", 
+            midpointDisplacementGenerator.MaxHeight
+        );
+
+        midpointDisplacementGenerator.Roughness = EditorGUILayout.Slider(
+            "Roughness", 
+            midpointDisplacementGenerator.Roughness, 
+            0.1f, 1.0f
+        );
+
+        midpointDisplacementGenerator.InitialRandomRange = EditorGUILayout.Slider(
+            "Initial Random Range", 
+            midpointDisplacementGenerator.InitialRandomRange, 
+            0.0f, 1.0f
+        );
+
+        midpointDisplacementGenerator.NormalizeResult = EditorGUILayout.Toggle(
+            "Normalize Result",
+            midpointDisplacementGenerator.NormalizeResult
+        );
+
+        midpointDisplacementGenerator.UseAbsoluteRandom = EditorGUILayout.Toggle(
+            "Use Absolute Random",
+            midpointDisplacementGenerator.UseAbsoluteRandom
+        );
+
+        midpointDisplacementGenerator.Seed = EditorGUILayout.IntField(
+            "Random Seed", 
+            midpointDisplacementGenerator.Seed
+        );
+
+        if (GUILayout.Button("Apply Midpoint Displacement"))
+        {
+            Undo.RegisterCompleteObjectUndo(terrainManager.terrain.terrainData, "Apply Midpoint Displacement");
+            terrainManager.ApplyGenerator(midpointDisplacementGenerator);
+        }
+
+        if (GUILayout.Button("Add to Preset"))
+        {
+            presetGenerators.Add(midpointDisplacementGenerator.Clone());
+        }
+    }
+}
         
         private void DrawSmoothing()
         {
