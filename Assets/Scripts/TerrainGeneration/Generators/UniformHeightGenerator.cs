@@ -11,6 +11,7 @@ namespace TerrainGeneration.Generators
     public class UniformHeightGenerator : ITerrainGenerator
     {
         [SerializeField] private float uniformStep = 0.1f;
+        [SerializeField] private bool normalizeToMinimum = false;
         private ITerrainGenerator _terrainGeneratorImplementation;
 
         public string Name => "Uniform Height";
@@ -21,15 +22,57 @@ namespace TerrainGeneration.Generators
             set => uniformStep = value;
         }
         
+        public bool NormalizeToMinimum
+        {
+            get => normalizeToMinimum;
+            set => normalizeToMinimum = value;
+        }
+        
         public void Generate(float[,] heightMap, int width, int height, Func<int, int, bool> shouldModify)
         {
-            for (int x = 0; x < width; x++)
+            if (normalizeToMinimum)
             {
-                for (int z = 0; z < height; z++)
+                // Find the minimum height of modifiable areas
+                float minHeight = float.MaxValue;
+        
+                for (int x = 0; x < width; x++)
                 {
-                    if (shouldModify(x, z))
+                    for (int z = 0; z < height; z++)
                     {
-                        heightMap[x, z] += uniformStep;
+                        if (shouldModify(x, z) && heightMap[x, z] < minHeight)
+                        {
+                            minHeight = heightMap[x, z];
+                        }
+                    }
+                }
+        
+                // Only proceed if we found valid heights to normalize
+                if (minHeight != float.MaxValue)
+                {
+                    // Apply the negative offset to bring the minimum to zero
+                    for (int x = 0; x < width; x++)
+                    {
+                        for (int z = 0; z < height; z++)
+                        {
+                            if (shouldModify(x, z))
+                            {
+                                heightMap[x, z] -= minHeight;
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Apply uniform height change
+                for (int x = 0; x < width; x++)
+                {
+                    for (int z = 0; z < height; z++)
+                    {
+                        if (shouldModify(x, z))
+                        {
+                            heightMap[x, z] += uniformStep;
+                        }
                     }
                 }
             }
@@ -39,7 +82,8 @@ namespace TerrainGeneration.Generators
         {
             return new UniformHeightGenerator
             {
-                uniformStep = this.uniformStep
+                uniformStep = this.uniformStep,
+                normalizeToMinimum = this.normalizeToMinimum
             };
         }
     }
