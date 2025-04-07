@@ -29,8 +29,7 @@ namespace TerrainGeneration.Editor
         
         // Smoother instances
         private BasicSmoother basicSmoother = new BasicSmoother();
-        private DistanceBasedSmoother distanceBasedSmoother = new DistanceBasedSmoother();
-        private AdaptiveSmoother adaptiveSmoother = new AdaptiveSmoother();
+        private EnhancedDistanceSmoother enhancedDistanceSmoother = new EnhancedDistanceSmoother();
         private DirectionalGradientSmoother directionalGradientSmoother = new DirectionalGradientSmoother();
         
         // Erosion instances
@@ -55,6 +54,12 @@ namespace TerrainGeneration.Editor
         private bool showErosion = false;
         private bool showDistanceGrid = false;
         private bool showPresets = false;
+        
+        // Enhanced smoother configuration foldouts
+        private bool showEnhancedBasicSettings = true;
+        private bool showEnhancedDistanceSettings = true;
+        private bool showEnhancedDetailSettings = true;
+        private bool showEnhancedBlendingSettings = true;
         
         // For building a generation preset
         private List<ITerrainGenerator> presetGenerators = new List<ITerrainGenerator>();
@@ -231,16 +236,6 @@ namespace TerrainGeneration.Editor
                 if (GUILayout.Button("Add Basic Smoother"))
                 {
                     presetSmoothers.Add(basicSmoother.Clone());
-                }
-
-                if (GUILayout.Button("Add Distance Smoother"))
-                {
-                    presetSmoothers.Add(distanceBasedSmoother.Clone());
-                }
-
-                if (GUILayout.Button("Add Adaptive Smoother"))
-                {
-                    presetSmoothers.Add(adaptiveSmoother.Clone());
                 }
 
                 if (GUILayout.Button("Add Gradient Smoother"))
@@ -682,38 +677,112 @@ namespace TerrainGeneration.Editor
                 
                 EditorGUILayout.Space(10);
                 
-                // Distance-based smoother
-                EditorGUILayout.LabelField("Distance-Based Smoother", EditorStyles.boldLabel);
+                // Enhanced Distance Smoother (replaces both Distance-Based and Adaptive smoothers)
+                EditorGUILayout.LabelField("Enhanced Distance Smoother", EditorStyles.boldLabel);
                 
                 EditorGUI.BeginDisabledGroup(!terrainManager.DistanceGridCalculated);
                 
-                distanceBasedSmoother.Iterations = EditorGUILayout.IntSlider(
-                    "Iterations",
-                    distanceBasedSmoother.Iterations,
-                    1, 100
-                );
-                
-                distanceBasedSmoother.BaseSmoothing = EditorGUILayout.Slider(
-                    "Base Smoothing",
-                    distanceBasedSmoother.BaseSmoothing,
-                    0f, 100f
-                );
-                
-                distanceBasedSmoother.DistanceFalloff = EditorGUILayout.Slider(
-                    "Distance Falloff",
-                    distanceBasedSmoother.DistanceFalloff,
-                    0.1f, 100f
-                );
-                
-                if (GUILayout.Button("Apply Distance-Based Smoothing"))
+                // Basic Settings
+                showEnhancedBasicSettings = EditorGUILayout.Foldout(showEnhancedBasicSettings, "Basic Settings", true);
+                if (showEnhancedBasicSettings)
                 {
-                    Undo.RegisterCompleteObjectUndo(terrainManager.terrain.terrainData, "Apply Distance-Based Smoothing");
-                    terrainManager.ApplySmoother(distanceBasedSmoother);
+                    enhancedDistanceSmoother.Iterations = EditorGUILayout.IntSlider(
+                        "Iterations",
+                        enhancedDistanceSmoother.Iterations,
+                        1, 10
+                    );
+                    
+                    enhancedDistanceSmoother.BaseSmoothing = EditorGUILayout.Slider(
+                        "Base Smoothing",
+                        enhancedDistanceSmoother.BaseSmoothing,
+                        0f, 10f
+                    );
+                }
+                
+                // Distance-Based Settings
+                showEnhancedDistanceSettings = EditorGUILayout.Foldout(showEnhancedDistanceSettings, "Distance-Based Settings", true);
+                if (showEnhancedDistanceSettings)
+                {
+                    enhancedDistanceSmoother.DistanceFalloff = EditorGUILayout.Slider(
+                        "Distance Falloff",
+                        enhancedDistanceSmoother.DistanceFalloff,
+                        0.1f, 5f
+                    );
+                    
+                    enhancedDistanceSmoother.UseDistanceThreshold = EditorGUILayout.Toggle(
+                        "Use Distance Threshold",
+                        enhancedDistanceSmoother.UseDistanceThreshold
+                    );
+                    
+                    if (enhancedDistanceSmoother.UseDistanceThreshold)
+                    {
+                        enhancedDistanceSmoother.DistanceThreshold = EditorGUILayout.Slider(
+                            "Distance Threshold",
+                            enhancedDistanceSmoother.DistanceThreshold,
+                            0.01f, 0.99f
+                        );
+                    }
+                    
+                    enhancedDistanceSmoother.RoadProximityWeight = EditorGUILayout.Slider(
+                        "Road Proximity Weight",
+                        enhancedDistanceSmoother.RoadProximityWeight,
+                        1f, 10f
+                    );
+                }
+                
+                // Detail Preservation Settings
+                showEnhancedDetailSettings = EditorGUILayout.Foldout(showEnhancedDetailSettings, "Detail Preservation", true);
+                if (showEnhancedDetailSettings)
+                {
+                    enhancedDistanceSmoother.PreserveDetail = EditorGUILayout.Toggle(
+                        "Preserve Detail",
+                        enhancedDistanceSmoother.PreserveDetail
+                    );
+                    
+                    if (enhancedDistanceSmoother.PreserveDetail)
+                    {
+                        enhancedDistanceSmoother.DetailPreservation = EditorGUILayout.Slider(
+                            "Detail Preservation",
+                            enhancedDistanceSmoother.DetailPreservation,
+                            0f, 1f
+                        );
+                        
+                        enhancedDistanceSmoother.MinSmoothingFactor = EditorGUILayout.Slider(
+                            "Min Smoothing Factor",
+                            enhancedDistanceSmoother.MinSmoothingFactor,
+                            0.01f, 0.5f
+                        );
+                    }
+                }
+                
+                // Blending Options
+                showEnhancedBlendingSettings = EditorGUILayout.Foldout(showEnhancedBlendingSettings, "Blending Options", true);
+                if (showEnhancedBlendingSettings)
+                {
+                    enhancedDistanceSmoother.UseLinearBlending = EditorGUILayout.Toggle(
+                        "Use Linear Blending",
+                        enhancedDistanceSmoother.UseLinearBlending
+                    );
+                    
+                    if (enhancedDistanceSmoother.UseLinearBlending)
+                    {
+                        enhancedDistanceSmoother.MinBlendFactor = EditorGUILayout.Slider(
+                            "Min Blend Factor",
+                            enhancedDistanceSmoother.MinBlendFactor,
+                            0.25f, 1f
+                        );
+                    }
+                }
+                
+                if (GUILayout.Button("Apply Enhanced Distance Smoothing"))
+                {
+                    Undo.RegisterCompleteObjectUndo(terrainManager.terrain.terrainData, "Apply Enhanced Distance Smoothing");
+                    terrainManager.ApplySmoother(enhancedDistanceSmoother);
                 }
                 
                 if (GUILayout.Button("Add to Preset"))
                 {
-                    presetSmoothers.Add(distanceBasedSmoother.Clone());
+                    presetSmoothers.Add(enhancedDistanceSmoother.Clone());
                 }
                 
                 EditorGUILayout.Space(10);
@@ -746,44 +815,6 @@ namespace TerrainGeneration.Editor
                 }
                 
                 EditorGUILayout.Space(10);
-                
-                // Adaptive smoother
-                EditorGUILayout.LabelField("Adaptive Smoother", EditorStyles.boldLabel);
-                
-                adaptiveSmoother.Iterations = EditorGUILayout.IntSlider(
-                    "Iterations",
-                    adaptiveSmoother.Iterations,
-                    1, 10
-                );
-                
-                adaptiveSmoother.BaseSmoothing = EditorGUILayout.Slider(
-                    "Base Smoothing",
-                    adaptiveSmoother.BaseSmoothing,
-                    0f, 10f
-                );
-                
-                adaptiveSmoother.DistanceFalloff = EditorGUILayout.Slider(
-                    "Distance Falloff",
-                    adaptiveSmoother.DistanceFalloff,
-                    0.1f, 5f
-                );
-                
-                adaptiveSmoother.DetailPreservation = EditorGUILayout.Slider(
-                    "Detail Preservation",
-                    adaptiveSmoother.DetailPreservation,
-                    0f, 1f
-                );
-                
-                if (GUILayout.Button("Apply Adaptive Smoothing"))
-                {
-                    Undo.RegisterCompleteObjectUndo(terrainManager.terrain.terrainData, "Apply Adaptive Smoothing");
-                    terrainManager.ApplySmoother(adaptiveSmoother);
-                }
-                
-                if (GUILayout.Button("Add to Preset"))
-                {
-                    presetSmoothers.Add(adaptiveSmoother.Clone());
-                }
                 
                 EditorGUI.EndDisabledGroup();
                 
