@@ -1,6 +1,6 @@
 using System;
-using UnityEngine;
 using TerrainGeneration.Core;
+using UnityEngine;
 
 namespace TerrainGeneration.Generators
 {
@@ -11,7 +11,7 @@ namespace TerrainGeneration.Generators
     public class UniformHeightGenerator : ITerrainGenerator
     {
         [SerializeField] private float uniformStep = 0.1f;
-        [SerializeField] private bool normalizeToMinimum = false;
+        [SerializeField] private bool normalizeToMinimum;
         private ITerrainGenerator _terrainGeneratorImplementation;
 
         public string Name => "Uniform Height";
@@ -47,7 +47,7 @@ namespace TerrainGeneration.Generators
                 }
         
                 // Only proceed if we found valid heights to normalize
-                if (minHeight != float.MaxValue)
+                if (!Mathf.Approximately(minHeight, float.MaxValue))
                 {
                     // Apply the negative offset to bring the minimum to zero
                     for (int x = 0; x < width; x++)
@@ -82,8 +82,8 @@ namespace TerrainGeneration.Generators
         {
             return new UniformHeightGenerator
             {
-                uniformStep = this.uniformStep,
-                normalizeToMinimum = this.normalizeToMinimum
+                uniformStep = uniformStep,
+                normalizeToMinimum = normalizeToMinimum
             };
         }
     }

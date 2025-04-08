@@ -1,10 +1,9 @@
 using UnityEngine;
 using System.IO;
-using System;
 
 namespace TerrainGeneration.Utilities
 {
-    public class DistanceGridVisualizer
+    public static class DistanceGridVisualizer
     {
         public static void CreateVisualization(int[,] distanceGrid, string outputPath)
         {
@@ -69,7 +68,7 @@ namespace TerrainGeneration.Utilities
             File.WriteAllBytes(outputPath, bytes);
             
             // Clean up
-            UnityEngine.Object.DestroyImmediate(texture);
+            Object.DestroyImmediate(texture);
             
             Debug.Log($"Distance grid visualization saved to: {outputPath}");
         }

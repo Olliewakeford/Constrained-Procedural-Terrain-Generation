@@ -11,40 +11,36 @@ namespace TerrainGeneration.Core
     /// <summary>
     /// Manages distance grid calculations and operations
     /// </summary>
-    public class DistanceGridManager : ISaveable
+    public class DistanceGridManager
     {
         #region Properties
         
-        private TerrainManager terrainManager;
-        private int[,] distanceGrid;
-        private bool isCalculated;
-        private static readonly Vector2Int[] neighbors = new Vector2Int[]
-        {
-            new Vector2Int(-1, -1), new Vector2Int(-1, 0), new Vector2Int(-1, 1),
-            new Vector2Int(0, -1),                         new Vector2Int(0, 1),
-            new Vector2Int(1, -1),  new Vector2Int(1, 0),  new Vector2Int(1, 1)
+        private readonly TerrainManager _terrainManager;
+
+        private static readonly Vector2Int[] Neighbors = {
+            new(-1, -1), new(-1, 0), new(-1, 1),
+            new(0, -1),              new(0, 1),
+            new(1, -1),  new(1, 0),  new(1, 1)
         };
         
-        public int[,] DistanceGrid => distanceGrid;
-        public bool IsCalculated => isCalculated;
+        public int[,] DistanceGrid { get; private set; }
+
+        public bool IsCalculated { get; private set; }
         
-        /// <summary>
-        /// Path to save/load the distance grid
-        /// </summary>
-        public string DistanceGridSavePath
+        private string DistanceGridSavePath
         {
             get
             {
-                // Get the current scene name
+                // Get the current scene Name
                 string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-                // Get the terrain object name
-                string terrainName = terrainManager.gameObject.name;
-                // Create a sanitized filename
-                string sanitizedName = string.Join("_", new[] { sceneName, terrainName }
+                // Get the terrain object Name
+                string terrainName = _terrainManager.gameObject.name;
+                // Create a clean filename
+                string cleanedName = string.Join("_", new[] { sceneName, terrainName }
                     .Select(s => string.Join("", s.Split(Path.GetInvalidFileNameChars()))));
                 
                 // Construct the full path
-                return Path.Combine("Assets", "Resources", "DistanceGrids", $"{sanitizedName}_distance_grid.dat");
+                return Path.Combine("Assets", "Resources", "DistanceGrids", $"{cleanedName}_distance_grid.dat");
             }
         }
         
@@ -54,7 +50,7 @@ namespace TerrainGeneration.Core
         
         public DistanceGridManager(TerrainManager manager)
         {
-            terrainManager = manager;
+            _terrainManager = manager;
             TryLoadDistanceGrid();
         }
         
@@ -74,7 +70,7 @@ namespace TerrainGeneration.Core
                 return;
             }
             
-            distanceGrid = new int[resolution, resolution];
+            DistanceGrid = new int[resolution, resolution];
             Queue<Vector2Int> queue = new Queue<Vector2Int>();
             int totalPixels = resolution * resolution;
             int processedPixels = 0;
@@ -88,12 +84,12 @@ namespace TerrainGeneration.Core
                 {
                     if (!shouldModify(x, z))
                     {
-                        distanceGrid[x, z] = 0;
+                        DistanceGrid[x, z] = 0;
                         queue.Enqueue(new Vector2Int(x, z));
                     }
                     else
                     {
-                        distanceGrid[x, z] = int.MaxValue;
+                        DistanceGrid[x, z] = int.MaxValue;
                     }
                     
                     processedPixels++;
@@ -113,34 +109,32 @@ namespace TerrainGeneration.Core
             while (queue.Count > 0)
             {
                 Vector2Int current = queue.Dequeue();
-                int currentDist = distanceGrid[current.x, current.y];
+                int currentDist = DistanceGrid[current.x, current.y];
                 
-                foreach (var offset in neighbors)
+                foreach (var offset in Neighbors)
                 {
                     int newX = current.x + offset.x;
                     int newY = current.y + offset.y;
                     
                     if (newX < 0 || newX >= resolution || newY < 0 || newY >= resolution) continue;
                     
-                    if (distanceGrid[newX, newY] <= currentDist + 1) continue;
+                    if (DistanceGrid[newX, newY] <= currentDist + 1) continue;
                     
-                    distanceGrid[newX, newY] = currentDist + 1;
+                    DistanceGrid[newX, newY] = currentDist + 1;
                     queue.Enqueue(new Vector2Int(newX, newY));
                 }
                 
                 processed++;
-                if (processed % 1000 == 0)
-                {
-                    float progress = 0.2f + (processed / (float)initialQueueSize * 0.8f);
-                    EditorUtility.DisplayProgressBar("Calculating Distance Grid", 
-                        $"Processing pixels... ({processed}/{initialQueueSize})", 
-                        progress);
-                }
+                if (processed % 1000 != 0) continue;
+                float progress = 0.2f + (processed / (float)initialQueueSize * 0.8f);
+                EditorUtility.DisplayProgressBar("Calculating Distance Grid", 
+                    $"Processing pixels... ({processed}/{initialQueueSize})", 
+                    progress);
             }
             
             EditorUtility.DisplayProgressBar("Calculating Distance Grid", "Saving results...", 1f);
             SaveDistanceGrid();
-            isCalculated = true;
+            IsCalculated = true;
             
             EditorUtility.ClearProgressBar();
             Debug.Log("Distance grid calculation completed and saved");
@@ -151,7 +145,7 @@ namespace TerrainGeneration.Core
         /// </summary>
         public void VisualizeDistanceGrid()
         {
-            if (distanceGrid == null)
+            if (DistanceGrid == null)
             {
                 if (!TryLoadDistanceGrid())
                 {
@@ -161,25 +155,11 @@ namespace TerrainGeneration.Core
             }
             
             string visualizationPath = Path.Combine(
-                Path.GetDirectoryName(DistanceGridSavePath),
+                Path.GetDirectoryName(DistanceGridSavePath) ?? string.Empty,
                 Path.GetFileNameWithoutExtension(DistanceGridSavePath) + "_visualization.png"
             );
             
-            DistanceGridVisualizer.CreateVisualization(distanceGrid, visualizationPath);
-        }
-        
-        #endregion
-
-        #region ISaveable Implementation
-        
-        public bool Save(string path)
-        {
-            return SaveDistanceGrid(path);
-        }
-        
-        public bool Load(string path)
-        {
-            return TryLoadDistanceGrid(path);
+            DistanceGridVisualizer.CreateVisualization(DistanceGrid, visualizationPath);
         }
         
         #endregion
@@ -197,33 +177,31 @@ namespace TerrainGeneration.Core
             
             try
             {
-                using (BinaryReader reader = new BinaryReader(File.Open(path, FileMode.Open)))
+                using BinaryReader reader = new BinaryReader(File.Open(path, FileMode.Open));
+                // Read and verify dimensions
+                int savedWidth = reader.ReadInt32();
+                int savedHeight = reader.ReadInt32();
+                    
+                if (_terrainManager.terrainData != null && 
+                    (savedWidth != _terrainManager.terrainData.heightmapResolution || 
+                     savedHeight != _terrainManager.terrainData.heightmapResolution))
                 {
-                    // Read and verify dimensions
-                    int savedWidth = reader.ReadInt32();
-                    int savedHeight = reader.ReadInt32();
-                    
-                    if (terrainManager.terrainData != null && 
-                        (savedWidth != terrainManager.terrainData.heightmapResolution || 
-                         savedHeight != terrainManager.terrainData.heightmapResolution))
-                    {
-                        Debug.LogWarning("Saved distance grid dimensions don't match current terrain");
-                        return false;
-                    }
-                    
-                    // Read the grid data
-                    distanceGrid = new int[savedWidth, savedHeight];
-                    for (int x = 0; x < savedWidth; x++)
-                    {
-                        for (int z = 0; z < savedHeight; z++)
-                        {
-                            distanceGrid[x, z] = reader.ReadInt32();
-                        }
-                    }
-                    
-                    isCalculated = true;
-                    return true;
+                    Debug.LogWarning("Saved distance grid dimensions don't match current terrain");
+                    return false;
                 }
+                    
+                // Read the grid data
+                DistanceGrid = new int[savedWidth, savedHeight];
+                for (int x = 0; x < savedWidth; x++)
+                {
+                    for (int z = 0; z < savedHeight; z++)
+                    {
+                        DistanceGrid[x, z] = reader.ReadInt32();
+                    }
+                }
+                    
+                IsCalculated = true;
+                return true;
             }
             catch (Exception e)
             {
@@ -235,10 +213,10 @@ namespace TerrainGeneration.Core
         /// <summary>
         /// Saves the calculated distance grid
         /// </summary>
-        private bool SaveDistanceGrid(string customPath = null)
+        private void SaveDistanceGrid(string customPath = null)
         {
-            if (distanceGrid == null) return false;
-            
+            if (DistanceGrid == null) return;
+
             string path = customPath ?? DistanceGridSavePath;
             
             try
@@ -247,32 +225,30 @@ namespace TerrainGeneration.Core
                 string directory = Path.GetDirectoryName(path);
                 if (!Directory.Exists(directory))
                 {
-                    Directory.CreateDirectory(directory);
+                    Directory.CreateDirectory(directory ?? string.Empty);
                 }
                 
                 using (BinaryWriter writer = new BinaryWriter(File.Open(path, FileMode.Create)))
                 {
                     // Write dimensions
-                    writer.Write(distanceGrid.GetLength(0));
-                    writer.Write(distanceGrid.GetLength(1));
+                    writer.Write(DistanceGrid.GetLength(0));
+                    writer.Write(DistanceGrid.GetLength(1));
                     
                     // Write the grid data
-                    for (int x = 0; x < distanceGrid.GetLength(0); x++)
+                    for (int x = 0; x < DistanceGrid.GetLength(0); x++)
                     {
-                        for (int z = 0; z < distanceGrid.GetLength(1); z++)
+                        for (int z = 0; z < DistanceGrid.GetLength(1); z++)
                         {
-                            writer.Write(distanceGrid[x, z]);
+                            writer.Write(DistanceGrid[x, z]);
                         }
                     }
                 }
                 
                 Debug.Log($"Distance grid saved to: {path}");
-                return true;
             }
             catch (Exception e)
             {
                 Debug.LogError($"Error saving distance grid: {e.Message}");
-                return false;
             }
         }
         

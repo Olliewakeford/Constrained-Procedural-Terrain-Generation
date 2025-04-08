@@ -13,35 +13,29 @@ namespace TerrainGeneration.Core
         /// <summary>
         /// Name of the preset
         /// </summary>
-        [SerializeField] public string Name;
+        [SerializeField] public string name;
 
         /// <summary>
         /// List of generators to apply in sequence
         /// </summary>
-        [SerializeField] public List<ITerrainGenerator> Generators = new List<ITerrainGenerator>();
+        public List<ITerrainGenerator> Generators = new();
 
         /// <summary>
         /// List of smoothers to apply after all generators
         /// </summary>
-        [SerializeField] public List<ITerrainSmoother> Smoothers = new List<ITerrainSmoother>();
+        public List<ITerrainSmoother> Smoothers = new();
 
         /// <summary>
-        /// Creates a new preset with the specified name
+        /// Creates a new preset with the specified Name
         /// </summary>
         public TerrainGenerationPreset(string name)
         {
-            Name = name;
+            this.name = name;
             // Always ensure Generators is initialized
-            if (Generators == null)
-            {
-                Generators = new List<ITerrainGenerator>();
-            }
+            Generators ??= new List<ITerrainGenerator>();
 
             // Always ensure Smoothers is initialized
-            if (Smoothers == null)
-            {
-                Smoothers = new List<ITerrainSmoother>();
-            }
+            Smoothers ??= new List<ITerrainSmoother>();
         }
 
         /// <summary>
@@ -49,7 +43,7 @@ namespace TerrainGeneration.Core
         /// </summary>
         public TerrainGenerationPreset Clone()
         {
-            TerrainGenerationPreset clone = new TerrainGenerationPreset(Name);
+            TerrainGenerationPreset clone = new TerrainGenerationPreset(name);
 
             // Clone each generator
             foreach (var generator in Generators)

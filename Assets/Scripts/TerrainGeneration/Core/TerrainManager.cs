@@ -1,41 +1,35 @@
-using System;
 using System.Collections.Generic;
 using TerrainGeneration.Generators;
-using TerrainGeneration.SmoothingAndErosion;
 using UnityEngine;
 
 namespace TerrainGeneration.Core
 {
     /// <summary>
     /// Main class responsible for managing terrain generation and modifications.
-    /// Replaces the original CustomTerrain class with a more modular approach.
     /// </summary>
     [ExecuteInEditMode]
     public class TerrainManager : MonoBehaviour
     {
         #region Properties and Fields
         
-        // Core references
+        // Terrain references
         public Terrain terrain;
         public TerrainData terrainData;
         
-        // Mask for protected areas
+        // Mask for prohibited areas where the heightmap should not be modified
         public Texture2D mask;
         public bool restoreTerrain = true;
         
-        // Events
-        public event Action OnTerrainChanged;
-        
         // Distance grid
-        private DistanceGridManager distanceGridManager;
-        public bool DistanceGridCalculated => distanceGridManager != null && distanceGridManager.IsCalculated;
+        private DistanceGridManager _distanceGridManager;
+        public bool DistanceGridCalculated => _distanceGridManager is { IsCalculated: true };
         
         // Preset management
         [SerializeField]
-        public List<TerrainGenerationPreset> savedPresets = new List<TerrainGenerationPreset>();
+        public List<TerrainGenerationPreset> savedPresets = new();
         
         // Heightmap resolution shorthand
-        public int HeightmapResolution => terrainData != null ? terrainData.heightmapResolution : 0;
+        private int HeightmapResolution => terrainData != null ? terrainData.heightmapResolution : 0;
         
         #endregion
 
@@ -62,7 +56,7 @@ namespace TerrainGeneration.Core
             }
     
             // Initialize distance grid manager
-            distanceGridManager = new DistanceGridManager(this);
+            _distanceGridManager = new DistanceGridManager(this);
     
             // Load or create presets
             LoadPresetsFromProject();
@@ -72,14 +66,12 @@ namespace TerrainGeneration.Core
 
         #region Core Methods
         
-        /// <summary>
-        /// Records an undo operation before modifying the terrain
-        /// </summary>
+        // This method allows the user to use Unity's Undo to revert changes made to the terrain
         private void RecordUndo(string operationName)
         {
             #if UNITY_EDITOR
-            // Record full Undo for terrain data
-            if (terrain != null && terrain.terrainData != null)
+            // Record full Undo for terrain data (checking terrain exists first)
+            if (terrain && terrain.terrainData)
             {
                 UnityEditor.Undo.RegisterCompleteObjectUndo(terrain.terrainData, operationName);
             }
@@ -91,7 +83,7 @@ namespace TerrainGeneration.Core
         /// </summary>
         public void ApplyGenerator(ITerrainGenerator generator)
         {
-            if (terrainData == null) return;
+            if (!terrainData) return;
     
             // Record undo state before modification
             RecordUndo($"Apply {generator.Name}");
@@ -118,17 +110,15 @@ namespace TerrainGeneration.Core
     
             // Update the terrain
             terrainData.SetHeights(0, 0, heightMap);
-    
-            // Notify listeners
-            OnTerrainChanged?.Invoke();
         }
         
+        // ReSharper disable Unity.PerformanceAnalysis
         /// <summary>
         /// Applies a terrain smoother to the terrain
         /// </summary>
         public void ApplySmoother(ITerrainSmoother smoother)
         {
-            if (terrainData == null) return;
+            if (!terrainData) return;
             
             // Check if we need a distance grid
             if (smoother.RequiresDistanceGrid && !DistanceGridCalculated)
@@ -148,25 +138,23 @@ namespace TerrainGeneration.Core
                 HeightmapResolution, 
                 HeightmapResolution, 
                 ShouldModifyTerrain,
-                smoother.RequiresDistanceGrid ? distanceGridManager.DistanceGrid : null
+                smoother.RequiresDistanceGrid ? _distanceGridManager.DistanceGrid : null
             );
             
             // Update the terrain
             terrainData.SetHeights(0, 0, heightMap);
-            
-            // Notify listeners
-            OnTerrainChanged?.Invoke();
         }
         
+        // ReSharper disable Unity.PerformanceAnalysis
         /// <summary>
         /// Applies a preset to the terrain
         /// </summary>
         public void ApplyPreset(TerrainGenerationPreset preset)
         {
-            if (terrainData == null) return;
+            if (!terrainData) return;
     
             // Record undo state before any modifications
-            RecordUndo($"Apply Preset: {preset.Name}");
+            RecordUndo($"Apply Preset: {preset.name}");
     
             // Start with a clean slate if needed
             if (restoreTerrain)
@@ -208,18 +196,16 @@ namespace TerrainGeneration.Core
                     HeightmapResolution, 
                     HeightmapResolution, 
                     ShouldModifyTerrain,
-                    smoother.RequiresDistanceGrid ? distanceGridManager.DistanceGrid : null
+                    smoother.RequiresDistanceGrid ? _distanceGridManager.DistanceGrid : null
                 );
                 terrainData.SetHeights(0, 0, heightMap);
             }
     
             // Reset flag
             restoreTerrain = originalRestoreValue;
-    
-            // Notify listeners
-            OnTerrainChanged?.Invoke();
         }
         
+        // ReSharper disable Unity.PerformanceAnalysis
         /// <summary>
         /// Saves the currently loaded presets to the project directory
         /// </summary>
@@ -231,6 +217,7 @@ namespace TerrainGeneration.Core
             }
         }
         
+        // ReSharper disable Unity.PerformanceAnalysis
         /// <summary>
         /// Loads all presets from the project directory
         /// </summary>
@@ -249,37 +236,25 @@ namespace TerrainGeneration.Core
     
             Debug.Log($"Loaded {savedPresets.Count} presets into TerrainManager");
         }
-
-        /// <summary>
-        /// Saves a specific preset to the project directory
-        /// </summary>
-        public void SavePresetToProject(TerrainGenerationPreset preset)
-        {
-            TerrainPresetManager.SavePresetToProject(preset, true);
-        }
         
+        // ReSharper disable Unity.PerformanceAnalysis
         /// <summary>
         /// Calculates the distance grid for distance-based operations
         /// </summary>
         public void CalculateDistanceGrid()
         {
-            if (distanceGridManager == null)
-            {
-                distanceGridManager = new DistanceGridManager(this);
-            }
-            
-            distanceGridManager.CalculateDistanceGrid(HeightmapResolution, ShouldModifyTerrain);
+            _distanceGridManager ??= new DistanceGridManager(this);
+
+            _distanceGridManager.CalculateDistanceGrid(HeightmapResolution, ShouldModifyTerrain);
         }
         
+        // ReSharper disable Unity.PerformanceAnalysis
         /// <summary>
         /// Visualizes the distance grid for debugging
         /// </summary>
         public void VisualizeDistanceGrid()
         {
-            if (distanceGridManager != null)
-            {
-                distanceGridManager.VisualizeDistanceGrid();
-            }
+            _distanceGridManager?.VisualizeDistanceGrid();
         }
         
         /// <summary>
@@ -296,7 +271,7 @@ namespace TerrainGeneration.Core
         /// </summary>
         private void InternalRestoreTerrain()
         {
-            if (terrainData == null) return;
+            if (!terrainData) return;
             
             // Create a new heightmap with zero heights
             float[,] resetHeightMap = new float[HeightmapResolution, HeightmapResolution];
@@ -324,21 +299,15 @@ namespace TerrainGeneration.Core
             
             // Apply the reset heightmap to the terrain
             terrainData.SetHeights(0, 0, resetHeightMap);
-            
-            // Notify listeners
-            OnTerrainChanged?.Invoke();
         }
         
         #endregion
 
         #region Utility Methods
-        
-        /// <summary>
-        /// Determines if a point on the terrain should be modified based on the mask
-        /// </summary>
-        public bool ShouldModifyTerrain(int x, int y)
+
+        private bool ShouldModifyTerrain(int x, int y)
         {
-            if (mask == null) return true;
+            if (!mask) return true;
             
             // Normalize coordinates to map to mask resolution
             float normX = y / (float)HeightmapResolution; // Swap y to x for rotation
@@ -348,7 +317,7 @@ namespace TerrainGeneration.Core
             Color maskColor = mask.GetPixelBilinear(normX, normY);
             
             // Only modify terrain where the mask is black (or a threshold of darkness)
-            return maskColor.r < 0.1f && maskColor.g < 0.1f && maskColor.b < 0.1f;
+            return maskColor is { r: < 0.1f, g: < 0.1f, b: < 0.1f };
         }
         
         /// <summary>
@@ -356,7 +325,7 @@ namespace TerrainGeneration.Core
         /// </summary>
         private float[,] GetHeightMap()
         {
-            if (terrainData == null) return null;
+            if (!terrainData) return null;
             
             // Get the current heightmap
             float[,] currentHeightMap = terrainData.GetHeights(0, 0, HeightmapResolution, HeightmapResolution);
@@ -366,34 +335,30 @@ namespace TerrainGeneration.Core
                 // Return the current heightmap if not resetting
                 return currentHeightMap;
             }
-            else
-            {
-                // Create a new heightmap to modify
-                float[,] modifiedHeightMap = new float[HeightmapResolution, HeightmapResolution];
+            
+            // Create a new heightmap to modify
+            float[,] modifiedHeightMap = new float[HeightmapResolution, HeightmapResolution];
                 
-                // Iterate over each point in the heightmap
-                for (int y = 0; y < HeightmapResolution; y++)
+            // Iterate over each point in the heightmap
+            for (int y = 0; y < HeightmapResolution; y++)
+            {
+                for (int x = 0; x < HeightmapResolution; x++)
                 {
-                    for (int x = 0; x < HeightmapResolution; x++)
+                    // If this point should not be modified, retain the original height
+                    if (!ShouldModifyTerrain(x, y))
                     {
-                        // If this point should not be modified, retain the original height
-                        if (!ShouldModifyTerrain(x, y))
-                        {
-                            modifiedHeightMap[x, y] = currentHeightMap[x, y];
-                        }
-                        // Otherwise, set the height to 0
-                        else
-                        {
-                            modifiedHeightMap[x, y] = 0;
-                        }
+                        modifiedHeightMap[x, y] = currentHeightMap[x, y];
+                    }
+                    // Otherwise, set the height to 0
+                    else
+                    {
+                        modifiedHeightMap[x, y] = 0;
                     }
                 }
-                
-                return modifiedHeightMap;
             }
+                
+            return modifiedHeightMap;
         }
-        
-        
         
         #endregion
     }

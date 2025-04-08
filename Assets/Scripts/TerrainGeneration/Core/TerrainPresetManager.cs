@@ -10,43 +10,36 @@ namespace TerrainGeneration.Core
     /// <summary>
     /// Manages saving and loading terrain generation presets to/from the project directory
     /// </summary>
-    public class TerrainPresetManager
+    public static class TerrainPresetManager
     {
-        /// <summary>
-        /// Path to the presets directory within the project
-        /// </summary>
-        public static string PresetsDirectory => Path.Combine(Application.dataPath, "TerrainPresets");
+        private static string PresetsDirectory => Path.Combine(Application.dataPath, "TerrainPresets");
         
-        /// <summary>
-        /// Ensures the presets directory exists
-        /// </summary>
-        public static void EnsureDirectoryExists()
+        private static void EnsureDirectoryExists()
         {
-            if (!Directory.Exists(PresetsDirectory))
-            {
-                Directory.CreateDirectory(PresetsDirectory);
-                #if UNITY_EDITOR
-                UnityEditor.AssetDatabase.Refresh();
-                #endif
-            }
+            if (Directory.Exists(PresetsDirectory)) return;
+            
+            Directory.CreateDirectory(PresetsDirectory);
+            #if UNITY_EDITOR
+            UnityEditor.AssetDatabase.Refresh();
+            #endif
         }
         
         /// <summary>
         /// Saves a preset to the project directory
         /// </summary>
-        public static bool SavePresetToProject(TerrainGenerationPreset preset, bool overwrite = false)
+        public static void SavePresetToProject(TerrainGenerationPreset preset, bool overwrite = false)
         {
             EnsureDirectoryExists();
             
-            // Sanitize filename
-            string fileName = preset.Name.Replace(" ", "_").Replace("/", "_").Replace("\\", "_");
+            // Clean filename
+            string fileName = preset.name.Replace(" ", "_").Replace("/", "_").Replace("\\", "_");
             string filePath = Path.Combine(PresetsDirectory, $"{fileName}.json");
             
             // Check if file exists and we're not overwriting
             if (File.Exists(filePath) && !overwrite)
             {
                 Debug.LogError($"Preset file {filePath} already exists. Use overwrite=true to replace it.");
-                return false;
+                return;
             }
             
             try
@@ -61,12 +54,10 @@ namespace TerrainGeneration.Core
                 #endif
                 
                 Debug.Log($"Preset saved to project at {filePath}");
-                return true;
             }
             catch (Exception e)
             {
                 Debug.LogError($"Failed to save preset: {e.Message}");
-                return false;
             }
         }
         
@@ -97,17 +88,11 @@ namespace TerrainGeneration.Core
                             TerrainGenerationPreset preset = ConvertSaveDataToPreset(saveData);
                             
                             // Ensure collections aren't null
-                            if (preset.Generators == null)
-                            {
-                                preset.Generators = new List<ITerrainGenerator>();
-                            }
+                            preset.Generators ??= new List<ITerrainGenerator>();
                             
-                            if (preset.Smoothers == null)
-                            {
-                                preset.Smoothers = new List<ITerrainSmoother>();
-                            }
+                            preset.Smoothers ??= new List<ITerrainSmoother>();
                             
-                            Debug.Log($"Loaded preset: {preset.Name} with {preset.Generators.Count} generators and {preset.Smoothers.Count} smoothers");
+                            Debug.Log($"Loaded preset: {preset.name} with {preset.Generators.Count} generators and {preset.Smoothers.Count} smoothers");
                             presets.Add(preset);
                         }
                         else
@@ -138,7 +123,7 @@ namespace TerrainGeneration.Core
         {
             PresetSaveData saveData = new PresetSaveData
             {
-                presetName = preset.Name,
+                presetName = preset.name,
                 generators = new List<GeneratorSaveData>(),
                 smoothers = new List<SmootherSaveData>()
             };
@@ -217,7 +202,7 @@ namespace TerrainGeneration.Core
         {
             try
             {
-                ITerrainGenerator generator = null;
+                ITerrainGenerator generator;
                 
                 // Use explicit type mapping for generators
                 switch (data.typeName)
@@ -258,7 +243,7 @@ namespace TerrainGeneration.Core
         {
             try
             {
-                ITerrainSmoother smoother = null;
+                ITerrainSmoother smoother;
                 
                 // Use explicit type mapping for smoothers
                 switch (data.typeName)
@@ -303,8 +288,8 @@ namespace TerrainGeneration.Core
     public class PresetSaveData
     {
         public string presetName;
-        public List<GeneratorSaveData> generators = new List<GeneratorSaveData>();
-        public List<SmootherSaveData> smoothers = new List<SmootherSaveData>();
+        public List<GeneratorSaveData> generators = new();
+        public List<SmootherSaveData> smoothers = new();
     }
     
     /// <summary>

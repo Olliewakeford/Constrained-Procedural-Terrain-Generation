@@ -31,8 +31,8 @@ namespace TerrainGeneration.Generators
         // For Perlin-based Voronoi
         [SerializeField] private float perlinXFrequency = 0.005f;
         [SerializeField] private float perlinYFrequency = 0.005f;
-        [SerializeField] private int perlinXOffset = 0;
-        [SerializeField] private int perlinYOffset = 0;
+        [SerializeField] private int perlinXOffset;
+        [SerializeField] private int perlinYOffset;
         [SerializeField] private int perlinOctaves = 3;
         [SerializeField] private float perlinPersistence = 8f;
         [SerializeField] private float perlinAmplitude = 0.3f;

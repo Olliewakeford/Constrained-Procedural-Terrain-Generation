@@ -29,7 +29,7 @@ namespace TerrainGeneration.SmoothingAndErosion
         [SerializeField] [Range(0, 1)] private float minSmoothingFactor = 0.05f;
         
         [Header("Blending Options")]
-        [SerializeField] private bool useLinearBlending = false;
+        [SerializeField] private bool useLinearBlending;
         [SerializeField] [Range(0.25f, 1f)] private float minBlendFactor = 0.25f;
         
         public string Name => "Enhanced Distance Smoother";
@@ -182,8 +182,11 @@ namespace TerrainGeneration.SmoothingAndErosion
                         float detailFactor = 1.0f;
                         if (preserveDetail && maxVariation > 0)
                         {
-                            float normalizedVariation = localVariation[x, y] / maxVariation;
-                            detailFactor = 1 - (normalizedVariation * detailPreservation);
+                            if (localVariation != null)
+                            {
+                                float normalizedVariation = localVariation[x, y] / maxVariation;
+                                detailFactor = 1 - (normalizedVariation * detailPreservation);
+                            }
                         }
                         
                         // Apply detail factor to smoothing

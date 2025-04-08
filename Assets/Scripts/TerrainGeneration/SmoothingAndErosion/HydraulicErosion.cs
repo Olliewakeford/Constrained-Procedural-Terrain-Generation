@@ -39,7 +39,7 @@ namespace TerrainGeneration.SmoothingAndErosion
         
         // Road integration parameters
         [SerializeField] private float maxErosionDepth = 0.1f;  // Maximum erosion depth as fraction of terrain height
-        [SerializeField] private float roadInfluenceMultiplier = 0.8f;  // How much roads reduce erosion (0-1, higher = less erosion)
+        [SerializeField] private float roadInfluenceMultiplier = 0.8f;  // How much the roads reduce erosion (0-1, higher = less erosion)
         [SerializeField] private float roadInfluenceDistance = 0.3f;  // Distance (normalized 0-1) at which roads influence erosion
 
         #endregion
@@ -74,7 +74,7 @@ namespace TerrainGeneration.SmoothingAndErosion
             float[][] erosionBrushWeights = PrecomputeErosionBrush(erosionRadius, erosionFalloff);
             
             // Simulate water droplets
-            int progress = 0;
+            int progress;
             int totalDroplets = dropletCount;
             
             EditorUtility.DisplayProgressBar("Hydraulic Erosion", "Initializing...", 0f);

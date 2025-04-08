@@ -13,8 +13,8 @@ namespace TerrainGeneration.Generators
     {
         [SerializeField] private float xFrequency = 0.005f;
         [SerializeField] private float yFrequency = 0.005f;
-        [SerializeField] private int xOffset = 0;
-        [SerializeField] private int yOffset = 0;
+        [SerializeField] private int xOffset;
+        [SerializeField] private int yOffset;
         [SerializeField] private int octaves = 3;
         [SerializeField] private float persistence = 8f;
         [SerializeField] private float amplitude = 0.3f;

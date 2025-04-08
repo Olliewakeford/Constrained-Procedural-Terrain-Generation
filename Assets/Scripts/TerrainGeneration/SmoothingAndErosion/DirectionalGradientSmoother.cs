@@ -58,18 +58,18 @@ namespace TerrainGeneration.SmoothingAndErosion
                         continue;
                     
                     // Get normalized distance from nearest road (0 = at road, 1 = max distance)
-                    float normalizedDistance = CalculateNormalizedDistance(distanceGrid, x, y, width, height);
+                    float normalizedDistance = CalculateNormalizedDistance(distanceGrid, x, y);
                     
                     // Skip if beyond search radius (using normalized distance)
                     if (normalizedDistance > 1)
                         continue;
                         
                     // Calculate current gradient at this point
-                    Vector2 currentGradient = CalculateLocalGradient(originalHeightMap, x, y, width, height);
+                    Vector2 currentGradient = CalculateLocalGradient(originalHeightMap, x, y);
                     
                     // Find the best road point to adjust toward
                     bool foundRoadPoint = FindBestRoadPoint(originalHeightMap, distanceGrid, x, y, width, height, 
-                                                           currentGradient, out Vector2 targetDirection, out float targetHeight);
+                                                           currentGradient, out float targetHeight);
                     
                     if (foundRoadPoint)
                     {
@@ -102,7 +102,7 @@ namespace TerrainGeneration.SmoothingAndErosion
             }
         }
         
-        private float CalculateNormalizedDistance(int[,] distanceGrid, int x, int y, int width, int height)
+        private float CalculateNormalizedDistance(int[,] distanceGrid, int x, int y)
         {
             // Get the raw distance from the distance grid
             int rawDistance = distanceGrid[x, y];
@@ -111,7 +111,7 @@ namespace TerrainGeneration.SmoothingAndErosion
             return rawDistance / searchRadius;
         }
 
-        private Vector2 CalculateLocalGradient(float[,] heightMap, int x, int y, int width, int height)
+        private Vector2 CalculateLocalGradient(float[,] heightMap, int x, int y)
         {
             // Calculate X gradient using central difference
             float dx = (heightMap[x + 1, y] - heightMap[x - 1, y]) / 2.0f;
@@ -124,10 +124,9 @@ namespace TerrainGeneration.SmoothingAndErosion
         }
 
         private bool FindBestRoadPoint(float[,] heightMap, int[,] distanceGrid, int x, int y, int width, int height, 
-                                      Vector2 currentGradient, out Vector2 targetDirection, out float targetHeight)
+                                      Vector2 currentGradient, out float targetHeight)
         {
             // Initialize output variables
-            targetDirection = Vector2.zero;
             targetHeight = heightMap[x, y];
             
             // Initialize variables for best road point search
@@ -180,7 +179,7 @@ namespace TerrainGeneration.SmoothingAndErosion
                                   (distanceScore * (1.0f - directionInfluence)) +
                                   (heightScore * 0.3f); // Small weight for height similarity
                     
-                    // Update best road point if this one has a better score
+                    // Update the best road point if this one has a better score
                     if (score > bestScore)
                     {
                         bestScore = score;
@@ -195,8 +194,7 @@ namespace TerrainGeneration.SmoothingAndErosion
             if (foundPoint)
             {
                 // Direction from current point to best road point
-                targetDirection = new Vector2(bestX - x, bestY - y).normalized;
-                
+
                 // Target height is the road height
                 targetHeight = heightMap[bestX, bestY];
                 
