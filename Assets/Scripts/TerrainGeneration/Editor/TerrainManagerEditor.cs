@@ -661,7 +661,7 @@ namespace TerrainGeneration.Editor
                 _enhancedDistanceSmoother.Iterations = EditorGUILayout.IntSlider(
                     "Iterations",
                     _enhancedDistanceSmoother.Iterations,
-                    1, 10
+                    1, 100
                 );
                     
                 _enhancedDistanceSmoother.BaseSmoothing = EditorGUILayout.Slider(
