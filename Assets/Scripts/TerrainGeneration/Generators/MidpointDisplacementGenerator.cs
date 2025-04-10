@@ -15,6 +15,7 @@ namespace TerrainGeneration.Generators
         [SerializeField] private bool normalizeResult = true;
         [SerializeField] private int seed;
         [SerializeField] private bool useAbsoluteRandom;
+        [SerializeField] private float displacementStrength = 0.5f; // Controls how much the displacement affects the existing terrain
 
         // Public property accessors
         public float MinHeight
@@ -58,6 +59,12 @@ namespace TerrainGeneration.Generators
             get => seed;
             set => seed = value;
         }
+        
+        public float DisplacementStrength
+        {
+            get => displacementStrength;
+            set => displacementStrength = Mathf.Clamp(value, 0.0f, 1.0f);
+        }
 
         // Interface implementation
         public string Name => "Midpoint Displacement";
@@ -73,38 +80,23 @@ namespace TerrainGeneration.Generators
             // Store the original height range for later normalization
             float heightRange = maxHeight - minHeight;
             
-            // Copy existing heights into a working buffer to avoid overwriting constrained areas
-            float[][] workingMap = new float[width][];
-            for (int index = 0; index < width; index++)
-            {
-                workingMap[index] = new float[height];
-            }
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    workingMap[x][y] = heightMap[x, y];
-                }
-            }
+            // Create a displacement map to store our displacement values
+            float[,] displacementMap = new float[width, height];
             
-            // Initialize the corners of the terrain with random heights
-            // Use a smaller range for initial values to prevent excessive peaks
+            // The corners of the terrain will receive random displacement
             float cornerRandom = initialRandomRange * heightRange;
             
-            // Calculate middle value within the min/max range
-            float midValue = minHeight + (heightRange * 0.5f);
-            
+            // Apply random displacement to the corners of the displacement map
             if (shouldModify(0, 0))
-                workingMap[0][0] = midValue + RandomOffset(prng, cornerRandom);
-            if (shouldModify(0, size))
-                workingMap[0][size] = midValue + RandomOffset(prng, cornerRandom);
-            if (shouldModify(size, 0))
-                workingMap[size][0] = midValue + RandomOffset(prng, cornerRandom);
-            if (shouldModify(size, size))
-                workingMap[size][size] = midValue + RandomOffset(prng, cornerRandom);
+                displacementMap[0, 0] = RandomOffset(prng, cornerRandom);
+            if (shouldModify(0, size) && size < height)
+                displacementMap[0, size] = RandomOffset(prng, cornerRandom);
+            if (shouldModify(size, 0) && size < width)
+                displacementMap[size, 0] = RandomOffset(prng, cornerRandom);
+            if (shouldModify(size, size) && size < width && size < height)
+                displacementMap[size, size] = RandomOffset(prng, cornerRandom);
             
-            // Diamond-Square algorithm
+            // Diamond-Square algorithm to fill the displacement map
             int squareSize = size;
             float randomRange = cornerRandom;
             
@@ -129,16 +121,16 @@ namespace TerrainGeneration.Generators
                             int x2 = Mathf.Min(x + halfSize, width - 1);
                             int y2 = Mathf.Min(y + halfSize, height - 1);
                             
-                            // Calculate the average height of the four corners
+                            // Calculate the average displacement of the four corners
                             float avg = (
-                                workingMap[x1][y1] + // Top-left
-                                workingMap[x2][y1] + // Top-right
-                                workingMap[x1][y2] + // Bottom-left
-                                workingMap[x2][y2]   // Bottom-right
+                                displacementMap[x1, y1] + // Top-left
+                                displacementMap[x2, y1] + // Top-right
+                                displacementMap[x1, y2] + // Bottom-left
+                                displacementMap[x2, y2]   // Bottom-right
                             ) / 4.0f;
                             
                             // Add scaled random displacement to the average
-                            workingMap[x][y] = avg + RandomOffset(prng, randomRange);
+                            displacementMap[x, y] = avg + RandomOffset(prng, randomRange);
                         }
                     }
                 }
@@ -157,28 +149,28 @@ namespace TerrainGeneration.Generators
                             // North neighbor
                             if (y - halfSize >= 0)
                             {
-                                sum += workingMap[x][y - halfSize];
+                                sum += displacementMap[x, y - halfSize];
                                 count++;
                             }
                             
                             // South neighbor
                             if (y + halfSize < height)
                             {
-                                sum += workingMap[x][y + halfSize];
+                                sum += displacementMap[x, y + halfSize];
                                 count++;
                             }
                             
                             // West neighbor
                             if (x - halfSize >= 0)
                             {
-                                sum += workingMap[x - halfSize][y];
+                                sum += displacementMap[x - halfSize, y];
                                 count++;
                             }
                             
                             // East neighbor
                             if (x + halfSize < width)
                             {
-                                sum += workingMap[x + halfSize][y];
+                                sum += displacementMap[x + halfSize, y];
                                 count++;
                             }
                             
@@ -186,7 +178,7 @@ namespace TerrainGeneration.Generators
                             {
                                 float avg = sum / count;
                                 // Add scaled random displacement to the average
-                                workingMap[x][y] = avg + RandomOffset(prng, randomRange);
+                                displacementMap[x, y] = avg + RandomOffset(prng, randomRange);
                             }
                         }
                     }
@@ -199,43 +191,45 @@ namespace TerrainGeneration.Generators
                 squareSize = halfSize;
             }
             
-            // Find actual min/max values in the generated terrain
-            float actualMin = float.MaxValue;
-            float actualMax = float.MinValue;
+            // Find min/max values in the displacement map for normalization
+            float dispMin = float.MaxValue;
+            float dispMax = float.MinValue;
             
-            if (normalizeResult)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    for (int x = 0; x < width; x++)
-                    {
-                        if (shouldModify(x, y))
-                        {
-                            actualMin = Mathf.Min(actualMin, workingMap[x][y]);
-                            actualMax = Mathf.Max(actualMax, workingMap[x][y]);
-                        }
-                    }
-                }
-            }
-            
-            // Apply the generated heights to the actual heightmap
             for (int y = 0; y < height; y++)
             {
                 for (int x = 0; x < width; x++)
                 {
                     if (shouldModify(x, y))
                     {
-                        // Normalize the height to fit within minHeight and maxHeight if requested
-                        if (normalizeResult && actualMin < actualMax)
+                        dispMin = Mathf.Min(dispMin, displacementMap[x, y]);
+                        dispMax = Mathf.Max(dispMax, displacementMap[x, y]);
+                    }
+                }
+            }
+            
+            // Apply the displacement to the actual heightmap
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (shouldModify(x, y))
+                    {
+                        float displacement;
+                        
+                        // Normalize the displacement if requested
+                        if (normalizeResult && dispMin < dispMax)
                         {
-                            float normalizedHeight = (workingMap[x][y] - actualMin) / (actualMax - actualMin);
-                            heightMap[x, y] = minHeight + normalizedHeight * heightRange;
+                            float normalizedDisp = (displacementMap[x, y] - dispMin) / (dispMax - dispMin);
+                            displacement = minHeight + normalizedDisp * heightRange;
                         }
                         else
                         {
-                            // Otherwise, just copy the value and clamp it to the desired range
-                            heightMap[x, y] = Mathf.Clamp(workingMap[x][y], minHeight, maxHeight);
+                            // Just clamp to the min/max range
+                            displacement = Mathf.Clamp(displacementMap[x, y], minHeight, maxHeight);
                         }
+                        
+                        // Add the displacement to the existing height, scaled by displacement strength
+                        heightMap[x, y] += displacement * displacementStrength;
                     }
                 }
             }
@@ -266,7 +260,8 @@ namespace TerrainGeneration.Generators
                 initialRandomRange = this.initialRandomRange,
                 normalizeResult = this.normalizeResult,
                 seed = this.seed,
-                useAbsoluteRandom = this.useAbsoluteRandom
+                useAbsoluteRandom = this.useAbsoluteRandom,
+                displacementStrength = this.displacementStrength
             };
         }
     }

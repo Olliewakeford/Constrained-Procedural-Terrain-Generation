@@ -565,14 +565,16 @@ namespace TerrainGeneration.Editor
             EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
             // Midpoint displacement parameters
-            _midpointDisplacementGenerator.MinHeight = EditorGUILayout.FloatField(
+            _midpointDisplacementGenerator.MinHeight = EditorGUILayout.Slider(
                 "Min Height", 
-                _midpointDisplacementGenerator.MinHeight
+                _midpointDisplacementGenerator.MinHeight,
+                0.0f, 1.0f
             );
 
-            _midpointDisplacementGenerator.MaxHeight = EditorGUILayout.FloatField(
+            _midpointDisplacementGenerator.MaxHeight = EditorGUILayout.Slider(
                 "Max Height", 
-                _midpointDisplacementGenerator.MaxHeight
+                _midpointDisplacementGenerator.MaxHeight,
+                0.0f, 1.0f
             );
 
             _midpointDisplacementGenerator.Roughness = EditorGUILayout.Slider(
@@ -600,6 +602,12 @@ namespace TerrainGeneration.Editor
             _midpointDisplacementGenerator.Seed = EditorGUILayout.IntField(
                 "Random Seed", 
                 _midpointDisplacementGenerator.Seed
+            );
+            
+            _midpointDisplacementGenerator.DisplacementStrength = EditorGUILayout.Slider(
+                "Displacement Strength", 
+                _midpointDisplacementGenerator.DisplacementStrength, 
+                0.0f, 1.0f
             );
 
             if (GUILayout.Button("Apply Midpoint Displacement"))
