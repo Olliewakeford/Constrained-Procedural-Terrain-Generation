@@ -27,7 +27,6 @@ namespace TerrainGeneration.Editor
         // Smoother instances
         private readonly BasicSmoother _basicSmoother = new();
         private readonly EnhancedDistanceSmoother _enhancedDistanceSmoother = new();
-        private readonly DirectionalGradientSmoother _directionalGradientSmoother = new();
         
         // Erosion instances
         private readonly HydraulicErosion _hydraulicErosion = new();
@@ -222,11 +221,6 @@ namespace TerrainGeneration.Editor
             if (GUILayout.Button("Add Basic Smoother"))
             {
                 _presetSmoothers.Add(_basicSmoother.Clone());
-            }
-
-            if (GUILayout.Button("Add Gradient Smoother"))
-            {
-                _presetSmoothers.Add(_directionalGradientSmoother.Clone());
             }
 
             EditorGUILayout.EndHorizontal();
@@ -755,35 +749,6 @@ namespace TerrainGeneration.Editor
             if (GUILayout.Button("Add to Preset"))
             {
                 _presetSmoothers.Add(_enhancedDistanceSmoother.Clone());
-            }
-                
-            EditorGUILayout.Space(10);
-                
-            // Distance-based smoother
-            EditorGUILayout.LabelField("Gradient-Based Smoother", EditorStyles.boldLabel);
-                
-            EditorGUI.BeginDisabledGroup(!_terrainManager.DistanceGridCalculated);
-                
-            _directionalGradientSmoother.SearchRadius = EditorGUILayout.FloatField("Search Radius", _directionalGradientSmoother.SearchRadius);
-            _directionalGradientSmoother.AdjustmentStrength = EditorGUILayout.Slider("Adjustment Strength", _directionalGradientSmoother.AdjustmentStrength, 0f, 1f);
-            _directionalGradientSmoother.DirectionInfluence = EditorGUILayout.Slider("Direction Influence", _directionalGradientSmoother.DirectionInfluence, 0f, 1f);
-            _directionalGradientSmoother.DetailPreservation = EditorGUILayout.Slider("Detail Preservation", _directionalGradientSmoother.DetailPreservation, 0f, 1f);
-        
-            EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.PrefixLabel("Falloff Type");
-            _directionalGradientSmoother.DistanceFalloff = (DirectionalGradientSmoother.FalloffType)EditorGUILayout.EnumPopup(_directionalGradientSmoother.DistanceFalloff);
-            EditorGUILayout.EndHorizontal();
-                
-                
-            if (GUILayout.Button("Apply Directional Gradient-Based Smoothing"))
-            {
-                Undo.RegisterCompleteObjectUndo(_terrainManager.terrain.terrainData, "Apply Gradient-Based Smoothing");
-                _terrainManager.ApplySmoother(_directionalGradientSmoother);
-            }
-                
-            if (GUILayout.Button("Add to Preset"))
-            {
-                _presetSmoothers.Add(_directionalGradientSmoother.Clone());
             }
                 
             EditorGUILayout.Space(10);

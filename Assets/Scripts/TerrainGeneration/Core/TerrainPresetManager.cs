@@ -254,9 +254,6 @@ namespace TerrainGeneration.Core
                     case "TerrainGeneration.SmoothingAndErosion.EnhancedDistanceSmoother":
                         smoother = new EnhancedDistanceSmoother();
                         break;
-                    case "TerrainGeneration.SmoothingAndErosion.DirectionalGradientSmoother":
-                        smoother = new DirectionalGradientSmoother();
-                        break;
                     case "TerrainGeneration.SmoothingAndErosion.HydraulicErosion":
                         smoother = new HydraulicErosion();
                         break;
