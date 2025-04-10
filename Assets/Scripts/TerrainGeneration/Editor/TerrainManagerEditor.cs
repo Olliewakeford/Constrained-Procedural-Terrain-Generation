@@ -849,7 +849,7 @@ namespace TerrainGeneration.Editor
                 0.1f, 2.0f
             );
                 
-            EditorGUILayout.LabelField("Road Integration", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Constrained Height Integration", EditorStyles.boldLabel);
                 
             _hydraulicErosion.MaxErosionDepth = EditorGUILayout.Slider(
                 "Max Erosion Depth",
@@ -858,13 +858,13 @@ namespace TerrainGeneration.Editor
             );
                 
             _hydraulicErosion.RoadInfluenceMultiplier = EditorGUILayout.Slider(
-                "Road Influence Multiplier",
+                "Constrained Height Influence Multiplier",
                 _hydraulicErosion.RoadInfluenceMultiplier,
                 0.0f, 1.0f
             );
                 
             _hydraulicErosion.RoadInfluenceDistance = EditorGUILayout.Slider(
-                "Road Influence Distance",
+                "Constrained Height Influence Distance",
                 _hydraulicErosion.RoadInfluenceDistance,
                 0.05f, 1.0f
             );
@@ -890,7 +890,7 @@ namespace TerrainGeneration.Editor
             _thermalErosion.Iterations = EditorGUILayout.IntSlider(
                 "Iterations",
                 _thermalErosion.Iterations,
-                1, 20
+                1, 100
             );
                 
             _thermalErosion.Talus = EditorGUILayout.Slider(
@@ -904,26 +904,6 @@ namespace TerrainGeneration.Editor
                 _thermalErosion.ErosionRate,
                 0.0f, 1.0f
             );
-                
-            _thermalErosion.RespectRoadSlopes = EditorGUILayout.Toggle(
-                "Respect Road Slopes",
-                _thermalErosion.RespectRoadSlopes
-            );
-                
-            if (_thermalErosion.RespectRoadSlopes)
-            {
-                _thermalErosion.RoadInfluenceDistance = EditorGUILayout.Slider(
-                    "Road Influence Distance",
-                    _thermalErosion.RoadInfluenceDistance,
-                    0.05f, 1.0f
-                );
-                    
-                _thermalErosion.RoadSlopeFactor = EditorGUILayout.Slider(
-                    "Road Slope Factor",
-                    _thermalErosion.RoadSlopeFactor,
-                    0.0f, 1.0f
-                );
-            }
                 
             if (GUILayout.Button("Apply Thermal Erosion"))
             {

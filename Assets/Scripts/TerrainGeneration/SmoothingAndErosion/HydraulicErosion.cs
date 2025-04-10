@@ -60,11 +60,6 @@ namespace TerrainGeneration.SmoothingAndErosion
             
             // Find the maximum distance value for normalization
             float maxDistanceValue = FindMaxDistanceValue(distanceGrid, width, height);
-            if (maxDistanceValue <= 0)
-            {
-                Debug.LogError("Invalid distance grid: no valid distances found");
-                return;
-            }
             
             // Create a copy of the height map to work with
             float[,] originalHeightMap = new float[width, height];

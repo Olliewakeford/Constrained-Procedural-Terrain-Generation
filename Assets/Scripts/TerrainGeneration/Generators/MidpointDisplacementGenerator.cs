@@ -16,6 +16,7 @@ namespace TerrainGeneration.Generators
         [SerializeField] private int seed;
         [SerializeField] private bool useAbsoluteRandom;
         [SerializeField] private float displacementStrength = 0.5f; // Controls how much the displacement affects the existing terrain
+        [SerializeField] private bool considerRoadHeights = true; // Whether to consider road heights when calculating heights for nearby terrain
 
         // Public property accessors
         public float MinHeight
@@ -64,6 +65,12 @@ namespace TerrainGeneration.Generators
         {
             get => displacementStrength;
             set => displacementStrength = Mathf.Clamp(value, 0.0f, 1.0f);
+        }
+        
+        public bool ConsiderRoadHeights
+        {
+            get => considerRoadHeights;
+            set => considerRoadHeights = value;
         }
 
         // Interface implementation
@@ -122,14 +129,62 @@ namespace TerrainGeneration.Generators
                             int y2 = Mathf.Min(y + halfSize, height - 1);
                             
                             // Calculate the average displacement of the four corners
-                            float avg = (
-                                displacementMap[x1, y1] + // Top-left
-                                displacementMap[x2, y1] + // Top-right
-                                displacementMap[x1, y2] + // Bottom-left
-                                displacementMap[x2, y2]   // Bottom-right
-                            ) / 4.0f;
+                            float sum = 0f;
+                            int count = 0;
                             
-                            // Add scaled random displacement to the average
+                            // Consider each corner, either using the displacement value or the actual heightmap value for road points
+                            
+                            // Top-left corner
+                            if (shouldModify(x1, y1))
+                            {
+                                sum += displacementMap[x1, y1];
+                                count++;
+                            }
+                            else if (considerRoadHeights)
+                            {
+                                // This is a road point - use the actual height from the heightmap
+                                sum += heightMap[x1, y1] * heightRange;
+                                count++;
+                            }
+                            
+                            // Top-right corner
+                            if (shouldModify(x2, y1))
+                            {
+                                sum += displacementMap[x2, y1];
+                                count++;
+                            }
+                            else if (considerRoadHeights)
+                            {
+                                sum += heightMap[x2, y1] * heightRange;
+                                count++;
+                            }
+                            
+                            // Bottom-left corner
+                            if (shouldModify(x1, y2))
+                            {
+                                sum += displacementMap[x1, y2];
+                                count++;
+                            }
+                            else if (considerRoadHeights)
+                            {
+                                sum += heightMap[x1, y2] * heightRange;
+                                count++;
+                            }
+                            
+                            // Bottom-right corner
+                            if (shouldModify(x2, y2))
+                            {
+                                sum += displacementMap[x2, y2];
+                                count++;
+                            }
+                            else if (considerRoadHeights)
+                            {
+                                sum += heightMap[x2, y2] * heightRange;
+                                count++;
+                            }
+                            
+                            // Calculate average and add random displacement
+                            float avg = count > 0 ? sum / count : 0;
                             displacementMap[x, y] = avg + RandomOffset(prng, randomRange);
                         }
                     }
@@ -147,31 +202,67 @@ namespace TerrainGeneration.Generators
                             int count = 0;
                             
                             // North neighbor
-                            if (y - halfSize >= 0)
+                            int northY = y - halfSize;
+                            if (northY >= 0)
                             {
-                                sum += displacementMap[x, y - halfSize];
-                                count++;
+                                if (shouldModify(x, northY))
+                                {
+                                    sum += displacementMap[x, northY];
+                                    count++;
+                                }
+                                else if (considerRoadHeights)
+                                {
+                                    sum += heightMap[x, northY] * heightRange;
+                                    count++;
+                                }
                             }
                             
                             // South neighbor
-                            if (y + halfSize < height)
+                            int southY = y + halfSize;
+                            if (southY < height)
                             {
-                                sum += displacementMap[x, y + halfSize];
-                                count++;
+                                if (shouldModify(x, southY))
+                                {
+                                    sum += displacementMap[x, southY];
+                                    count++;
+                                }
+                                else if (considerRoadHeights)
+                                {
+                                    sum += heightMap[x, southY] * heightRange;
+                                    count++;
+                                }
                             }
                             
                             // West neighbor
-                            if (x - halfSize >= 0)
+                            int westX = x - halfSize;
+                            if (westX >= 0)
                             {
-                                sum += displacementMap[x - halfSize, y];
-                                count++;
+                                if (shouldModify(westX, y))
+                                {
+                                    sum += displacementMap[westX, y];
+                                    count++;
+                                }
+                                else if (considerRoadHeights)
+                                {
+                                    sum += heightMap[westX, y] * heightRange;
+                                    count++;
+                                }
                             }
                             
                             // East neighbor
-                            if (x + halfSize < width)
+                            int eastX = x + halfSize;
+                            if (eastX < width)
                             {
-                                sum += displacementMap[x + halfSize, y];
-                                count++;
+                                if (shouldModify(eastX, y))
+                                {
+                                    sum += displacementMap[eastX, y];
+                                    count++;
+                                }
+                                else if (considerRoadHeights)
+                                {
+                                    sum += heightMap[eastX, y] * heightRange;
+                                    count++;
+                                }
                             }
                             
                             if (count > 0)
@@ -261,7 +352,8 @@ namespace TerrainGeneration.Generators
                 normalizeResult = this.normalizeResult,
                 seed = this.seed,
                 useAbsoluteRandom = this.useAbsoluteRandom,
-                displacementStrength = this.displacementStrength
+                displacementStrength = this.displacementStrength,
+                considerRoadHeights = this.considerRoadHeights
             };
         }
     }

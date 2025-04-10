@@ -349,7 +349,7 @@ MonoBehaviour:
   terrain: {fileID: 920466374}
   terrainData: {fileID: 15600000, guid: 23c5a194a15404148bcd4cf98e17bb0c, type: 2}
   mask: {fileID: 2800000, guid: 9a739509826dc4984a97d878df61a490, type: 3}
-  restoreTerrain: 0
+  restoreTerrain: 1
   savedPresets:
   - name: HillyAndRough_NoBlend
 --- !u!1 &961739749
