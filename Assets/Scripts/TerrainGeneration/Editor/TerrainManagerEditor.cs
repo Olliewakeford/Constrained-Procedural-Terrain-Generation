@@ -884,33 +884,33 @@ namespace TerrainGeneration.Editor
                 
             // Thermal erosion
             EditorGUILayout.LabelField("Thermal Erosion", EditorStyles.boldLabel);
-                
+    
             EditorGUILayout.HelpBox("Simulates material slumping on steep slopes to create more natural terrain gradients.", MessageType.Info);
-                
+    
             _thermalErosion.Iterations = EditorGUILayout.IntSlider(
                 "Iterations",
                 _thermalErosion.Iterations,
                 1, 100
             );
-                
-            _thermalErosion.Talus = EditorGUILayout.Slider(
-                "Maximum Stable Slope",
-                _thermalErosion.Talus,
-                0.01f, 2.0f
+    
+            _thermalErosion.ErosionStrength = EditorGUILayout.Slider(
+                "Erosion Threshold",
+                _thermalErosion.ErosionStrength,
+                0.001f, 0.1f
             );
-                
+    
             _thermalErosion.ErosionRate = EditorGUILayout.Slider(
                 "Erosion Rate",
                 _thermalErosion.ErosionRate,
                 0.0f, 1.0f
             );
-                
+    
             if (GUILayout.Button("Apply Thermal Erosion"))
             {
                 Undo.RegisterCompleteObjectUndo(_terrainManager.terrain.terrainData, "Apply Thermal Erosion");
                 _terrainManager.ApplySmoother(_thermalErosion);
             }
-                
+    
             if (GUILayout.Button("Add to Preset"))
             {
                 _presetSmoothers.Add(_thermalErosion.Clone());

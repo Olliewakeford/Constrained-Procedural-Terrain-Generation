@@ -16,8 +16,8 @@ namespace TerrainGeneration.SmoothingAndErosion
         #region Parameters
         
         [SerializeField] private int iterations = 25;  // Number of erosion iterations to perform
-        [SerializeField] private float talus = 0.01f;  // Maximum stable slope angle (as a height/width ratio)
-        [SerializeField] private float erosionRate = 0.9f;  // Rate at which material is transferred (0-1)
+        [SerializeField] private float erosionStrength = 0.01f;  // Threshold difference in height to trigger erosion
+        [SerializeField] private float erosionRate = 0.5f;  // Rate at which material is transferred (0-1)
         
         #endregion
         
@@ -60,18 +60,18 @@ namespace TerrainGeneration.SmoothingAndErosion
             
             Debug.Log($"Terrain analysis: Height range = {minHeight} to {maxHeight}, Range = {maxHeight - minHeight}");
             Debug.Log($"Modifiable points: {modifiablePoints} out of {width * height}");
-            Debug.Log($"Maximum slope found: {maxSlope}, Current talus threshold: {talus}");
+            Debug.Log($"Maximum slope found: {maxSlope}, Current erosion threshold: {erosionStrength}");
             
-            // If max slope is very small, auto-adjust talus
-            if (maxSlope > 0 && maxSlope < talus)
+            // If max slope is very small, auto-adjust erosion strength
+            if (maxSlope > 0 && maxSlope < erosionStrength)
             {
-                float newTalus = maxSlope * 0.5f; // Set talus to half the max slope
-                Debug.Log($"Auto-adjusting talus from {talus} to {newTalus} based on terrain analysis");
-                talus = newTalus;
+                float newErosionStrength = maxSlope * 0.5f; // Set erosion strength to half the max slope
+                Debug.Log($"Auto-adjusting erosion strength from {erosionStrength} to {newErosionStrength} based on terrain analysis");
+                erosionStrength = newErosionStrength;
             }
             
-            // Simple approach that doesn't depend on the distance grid
-            Debug.Log($"Starting simplified thermal erosion with talus = {talus}, erosionRate = {erosionRate}, iterations = {iterations}");
+            // Simple thermal erosion approach
+            Debug.Log($"Starting simplified thermal erosion with erosionStrength = {erosionStrength}, erosionRate = {erosionRate}, iterations = {iterations}");
             
             // Process multiple iterations
             for (int iteration = 0; iteration < iterations; iteration++)
@@ -88,6 +88,7 @@ namespace TerrainGeneration.SmoothingAndErosion
                 // Track changes for debugging
                 int changesThisIteration = 0;
                 float largestChange = 0f;
+                float totalMaterialMoved = 0f;
                 
                 // Process each cell in the heightmap
                 for (int y = 0; y < height; y++)
@@ -97,16 +98,9 @@ namespace TerrainGeneration.SmoothingAndErosion
                         // Skip if we can't modify this cell
                         if (!shouldModify(x, y)) continue;
                         
-                        // Get current cell height
-                        float currentHeight = originalHeightMap[x, y];
-                        
                         // Get neighboring cells
                         List<Vector2> neighbors = TerrainUtils.GenerateNeighbours(new Vector2(x, y), width, height);
                         
-                        // Use a fixed talus value everywhere for simplicity
-                        float localTalus = talus;
-                        
-                        // Process each neighbor for potential material transfer
                         foreach (Vector2 neighbor in neighbors)
                         {
                             int nx = (int)neighbor.x;
@@ -115,29 +109,26 @@ namespace TerrainGeneration.SmoothingAndErosion
                             // Skip if this neighbor can't be modified
                             if (!shouldModify(nx, ny)) continue;
                             
-                            // Get this neighbor's height
-                            float neighborHeight = originalHeightMap[nx, ny];
-                            
-                            // Calculate height difference and slope
-                            float heightDifference = currentHeight - neighborHeight;
-                            
-                            // Only erode if slope exceeds the talus angle and we're higher than neighbor
-                            if (heightDifference > localTalus)
+                            // Check if our height exceeds the neighbor's height by more than the erosion threshold
+                            if (originalHeightMap[x, y] > originalHeightMap[nx, ny] + erosionStrength)
                             {
-                                // Calculate amount to transfer
-                                float transferAmount = (heightDifference - localTalus) * erosionRate;
+                                // Calculate the amount to erode (percentage of height difference)
+                                float heightDifference = originalHeightMap[x, y] - originalHeightMap[nx, ny];
+                                float transferAmount = heightDifference * erosionRate;
                                 
-                                // Apply the height transfer
+                                // Apply the erosion
                                 heightMap[x, y] -= transferAmount;
                                 heightMap[nx, ny] += transferAmount;
                                 
                                 // Track changes for debugging
                                 changesThisIteration++;
                                 largestChange = Mathf.Max(largestChange, transferAmount);
+                                totalMaterialMoved += transferAmount;
                                 
                                 // Debug log for significant transfers
-                                if (transferAmount > maxHeight * 0.01f) {
-                                    Debug.Log($"Transfer: {transferAmount:F4} from [{x},{y}] to [{nx},{ny}], Slope: {heightDifference:F4}");
+                                if (transferAmount > (maxHeight - minHeight) * 0.01f)
+                                {
+                                    Debug.Log($"Transfer: {transferAmount:F4} from [{x},{y}] to [{nx},{ny}], Difference: {heightDifference:F4}");
                                 }
                             }
                         }
@@ -145,10 +136,11 @@ namespace TerrainGeneration.SmoothingAndErosion
                 }
                 
                 // Log summary of changes for this iteration
-                Debug.Log($"Iteration {iteration+1}: {changesThisIteration} changes made, largest change: {largestChange:F4}");
+                Debug.Log($"Iteration {iteration+1}: {changesThisIteration} changes made, largest change: {largestChange:F4}, total material moved: {totalMaterialMoved:F4}");
                 
                 // If no significant changes were made, we can break early
-                if (largestChange < (maxHeight - minHeight) * 0.0001f) {
+                if (largestChange < (maxHeight - minHeight) * 0.0001f)
+                {
                     Debug.Log($"Early stopping at iteration {iteration+1} - no significant changes");
                     break;
                 }
@@ -163,7 +155,7 @@ namespace TerrainGeneration.SmoothingAndErosion
             return new ThermalErosion
             {
                 iterations = this.iterations,
-                talus = this.talus,
+                erosionStrength = this.erosionStrength,
                 erosionRate = this.erosionRate
             };
         }
@@ -178,10 +170,10 @@ namespace TerrainGeneration.SmoothingAndErosion
             set => iterations = Mathf.Max(1, value);
         }
         
-        public float Talus
+        public float ErosionStrength
         {
-            get => talus;
-            set => talus = Mathf.Max(0.0001f, value);
+            get => erosionStrength;
+            set => erosionStrength = Mathf.Max(0.0001f, value);
         }
         
         public float ErosionRate
