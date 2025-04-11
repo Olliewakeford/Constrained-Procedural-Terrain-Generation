@@ -32,31 +32,36 @@ namespace TerrainGeneration.Utilities
         }
         
         /// <summary>
-        /// Generates a list of neighboring points around a given position
+        /// Generates a list of neighboring points around a given position, excluding the position itself
+        /// and any points that would fall outside the specified bounds.
         /// </summary>
         public static System.Collections.Generic.List<Vector2> GenerateNeighbours(Vector2 pos, int width, int height)
         {
             System.Collections.Generic.List<Vector2> neighbours = new System.Collections.Generic.List<Vector2>();
-            
+    
             // Loop through a 3x3 grid centered on the given position
             for (int y = -1; y < 2; y++)
             {
                 for (int x = -1; x < 2; x++)
                 {
-                    if (!(x == 0 && y == 0))
-                    {
-                        Vector2 neighbourPos = new Vector2(
-                            Mathf.Clamp(pos.x + x, 0, width - 1),
-                            Mathf.Clamp(pos.y + y, 0, height - 1));
-                        
-                        if (!neighbours.Contains(neighbourPos))
-                        {
-                            neighbours.Add(neighbourPos);
-                        }
-                    }
+                    // Skip the center point (current position)
+                    if (x == 0 && y == 0)
+                        continue;
+            
+                    // Calculate the neighbor position
+                    int neighborX = (int)pos.x + x;
+                    int neighborY = (int)pos.y + y;
+            
+                    // Skip neighbors that are out of bounds
+                    if (neighborX < 0 || neighborX >= width || neighborY < 0 || neighborY >= height)
+                        continue;
+            
+                    // Add valid neighbor
+                    Vector2 neighbourPos = new Vector2(neighborX, neighborY);
+                    neighbours.Add(neighbourPos);
                 }
             }
-            
+    
             return neighbours;
         }
     }
