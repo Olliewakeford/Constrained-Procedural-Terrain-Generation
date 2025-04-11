@@ -32,7 +32,6 @@ namespace TerrainGeneration.SmoothingAndErosion
             // Analyze height range to better understand scale
             float minHeight = float.MaxValue;
             float maxHeight = float.MinValue;
-            int modifiablePoints = 0;
             float maxSlope = 0f;
             
             for (int y = 0; y < height; y++)
@@ -41,7 +40,6 @@ namespace TerrainGeneration.SmoothingAndErosion
                 {
                     if (shouldModify(x, y))
                     {
-                        modifiablePoints++;
                         minHeight = Mathf.Min(minHeight, heightMap[x, y]);
                         maxHeight = Mathf.Max(maxHeight, heightMap[x, y]);
                         
@@ -59,16 +57,15 @@ namespace TerrainGeneration.SmoothingAndErosion
             }
             
             Debug.Log($"Terrain analysis: Height range = {minHeight} to {maxHeight}, Range = {maxHeight - minHeight}");
-            Debug.Log($"Modifiable points: {modifiablePoints} out of {width * height}");
             Debug.Log($"Maximum slope found: {maxSlope}, Current erosion threshold: {erosionStrength}");
             
-            // If max slope is very small, auto-adjust erosion strength
-            if (maxSlope > 0 && maxSlope < erosionStrength)
-            {
-                float newErosionStrength = maxSlope * 0.5f; // Set erosion strength to half the max slope
-                Debug.Log($"Auto-adjusting erosion strength from {erosionStrength} to {newErosionStrength} based on terrain analysis");
-                erosionStrength = newErosionStrength;
-            }
+            // // If max slope is very small, auto-adjust erosion strength
+            // if (maxSlope > 0 && maxSlope < erosionStrength)
+            // {
+            //     float newErosionStrength = maxSlope * 0.5f; // Set erosion strength to half the max slope
+            //     Debug.Log($"Auto-adjusting erosion strength from {erosionStrength} to {newErosionStrength} based on terrain analysis");
+            //     erosionStrength = newErosionStrength;
+            // }
             
             // Simple thermal erosion approach
             Debug.Log($"Starting simplified thermal erosion with erosionStrength = {erosionStrength}, erosionRate = {erosionRate}, iterations = {iterations}");
@@ -125,11 +122,6 @@ namespace TerrainGeneration.SmoothingAndErosion
                                 largestChange = Mathf.Max(largestChange, transferAmount);
                                 totalMaterialMoved += transferAmount;
                                 
-                                // Debug log for significant transfers
-                                if (transferAmount > (maxHeight - minHeight) * 0.01f)
-                                {
-                                    Debug.Log($"Transfer: {transferAmount:F4} from [{x},{y}] to [{nx},{ny}], Difference: {heightDifference:F4}");
-                                }
                             }
                         }
                     }
